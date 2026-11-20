@@ -138,7 +138,7 @@ private const val TAG = "AGModelManagerViewModel"
 private const val TEXT_INPUT_HISTORY_MAX_SIZE = 50
 private const val MODEL_ALLOWLIST_FILENAME = "model_allowlist.json"
 private const val ALLOWLIST_BASE_URL =
-  "https://raw.githubusercontent.com/google-ai-edge/gallery/refs/heads/main/model_allowlists"
+  "https://raw.githubusercontent.com/Aleeshu/espanol-edge/refs/heads/main/model_allowlists"
 
 /**
  * Location of an optional local model allowlist used for testing.
@@ -2298,8 +2298,11 @@ constructor(
           modelAllowlist = data?.jsonObj
 
           if (modelAllowlist == null) {
-            Log.w(TAG, "Failed to load model allowlist from internet. Trying to load it from disk")
-            modelAllowlist = readModelAllowlistFromDisk()
+            Log.w(
+              TAG,
+              "Failed to load model allowlist from internet. Trying disk cache, then bundled asset.",
+            )
+            modelAllowlist = readModelAllowlistFromDisk() ?: readBundledModelAllowlistFromAssets()
           } else {
             Log.d(TAG, "Done: loading model allowlist from internet")
             saveModelAllowlistToDisk(modelAllowlistContent = data?.textContent ?: "{}")
@@ -2373,7 +2376,9 @@ constructor(
           for (taskType in allowedModel.taskTypes.orEmpty()) {
             if (taskType == BuiltInTaskId.LLM_TEST) continue
             val task = curTasks.find { it.id == taskType }
-            task?.models?.add(model)
+            if (task != null && task.models.none { it.name == model.name }) {
+              task.models.add(model)
+            }
 
             if (task?.id == BuiltInTaskId.LLM_TINY_GARDEN) {
               val newConfigs = model.configs.toMutableList()
@@ -2488,6 +2493,18 @@ constructor(
       Log.d(TAG, "Done: saving model allowlist to disk.")
     } catch (e: Exception) {
       Log.e(TAG, "failed to write model allowlist to disk", e)
+    }
+  }
+
+  private fun readBundledModelAllowlistFromAssets(): ModelAllowlist? {
+    return try {
+      Log.d(TAG, "Reading bundled model allowlist from assets: $MODEL_ALLOWLIST_FILENAME")
+      val content =
+        context.assets.open(MODEL_ALLOWLIST_FILENAME).bufferedReader().use { it.readText() }
+      Gson().fromJson(content, ModelAllowlist::class.java)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to read bundled model allowlist from assets", e)
+      null
     }
   }
 

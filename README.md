@@ -25,8 +25,34 @@ Configure learning preferences and AI execution mode anytime in **Settings (⚙)
 * **CEFR Proficiency**: `A1`, `A2`, `B1`, `B2`, `C1`, `C2`.
 * **Learning Toggles**: *Inline Grammar Corrections* and *Show English Hints* (or switch off for full Spanish immersion).
 * **Hybrid On-Device + Cloud AI**:
-  * **On-Device Mode (Offline)**: Download Gemma / LiteRT-LM models locally via LiteRT-LM or run AICore system models with complete on-device privacy.
+  * **On-Device Mode (Offline)**: Download free phone LLMs, ASR, and TTS models directly inside the app (bundled offline allowlist + hosted `model_allowlists/1_0_24.json`).
   * **Cloud Mode (Instant)**: Paste a Gemini API key in Settings to unlock `Gemini 2.5 Flash (Cloud)` and `Gemini 2.5 Flash-Lite (Cloud)` with encrypted key storage (`x-goog-api-key` header) across Chat, Camera Tutor, and Pronunciation Lab.
+
+---
+
+## Free On-Device Phone, ASR & TTS Models
+
+Español Edge bundles an offline fallback allowlist (`assets/model_allowlist.json`) and loads `model_allowlists/1_0_24.json` so free phone AI, speech recognition, and voice models are immediately available in Model Manager without requiring a paid API key:
+
+### Phone LLMs (LiteRT-LM)
+* **No Hugging Face login required**:
+  * `Gemma-4-E2B-it` (2.4 GB — text + camera vision + audio, *Spanish Tutor Chat*, *Camera Tutor*, *Pronunciation Lab*)
+  * `Gemma-4-E4B-it` (3.4 GB — higher-capacity text + camera vision + audio)
+  * `Qwen2.5-1.5B-Instruct` (1.5 GB — lightweight multilingual text tutor)
+  * `DeepSeek-R1-Distill-Qwen-1.5B` (1.7 GB — compact reasoning & conversation)
+* **Free Hugging Face models (accept Gemma license)**:
+  * `Gemma3-1B-IT` (557 MB — ultra-lightweight phone chat)
+  * `Gemma-3n-E2B-it` (3.4 GB — text + vision + audio) & `Gemma-3n-E4B-it` (4.6 GB — text + vision + audio)
+
+### Speech Recognition (ASR)
+* `Parakeet TDT 0.6B ASR` (586 MB — open-weight, no HF login, supports Spanish `es-ES` + 24 languages on any 4 GB+ Android phone)
+* `ML Kit ASR (Basic)` & `ML Kit ASR (Advanced)` (free system-managed Google Play Services / AICore speech recognition with Spanish `es-ES`)
+
+### Text-to-Speech (TTS)
+* `Kokoro 82M (TTS)` (281 MB — open-weight, no HF login, includes Spanish `es-ES` voices + 8 languages)
+* `PocketTTS 100M (TTS)` (725 MB — open-weight, no HF login, includes Spanish `es-ES` voice `lola`)
+* `Phonon 31M (TTS)` (83 MB — lightweight open-weight English TTS)
+* `ML Kit TTS` (free on-device expressive TTS on supported Pixel & Galaxy phones with `es-ES` & `es-US`)
 
 ---
 

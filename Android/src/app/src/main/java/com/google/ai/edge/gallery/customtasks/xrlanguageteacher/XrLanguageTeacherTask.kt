@@ -185,13 +185,15 @@ constructor(
       models = mutableListOf(),
       modelNames =
         listOf(
-          GeminiCloudModels.GEMINI_2_5_FLASH_NAME,
-          GeminiCloudModels.GEMINI_2_5_FLASH_LITE_NAME,
-          "Gemma 4 E2B (Gemini Nano via AICore)",
-          "Gemma 4 E4B (Gemini Nano via AICore)",
-          "Gemma-4-E2B-it TPU",
           "Gemma-4-E2B-it",
           "Gemma-4-E4B-it",
+          "Gemma-3n-E2B-it",
+          "Gemma-3n-E4B-it",
+          "Gemma-4-E2B-it TPU",
+          "Gemma 4 E2B (Gemini Nano via AICore)",
+          "Gemma 4 E4B (Gemini Nano via AICore)",
+          GeminiCloudModels.GEMINI_2_5_FLASH_NAME,
+          GeminiCloudModels.GEMINI_2_5_FLASH_LITE_NAME,
         ),
       defaultSystemPrompt = CharacterPersona.BUDDY.defaultPromptTemplate,
     )
