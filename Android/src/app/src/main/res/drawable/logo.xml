@@ -1,34 +1,43 @@
-<!--
- Copyright 2025 Google LLC
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="196dp"
-    android:height="199dp"
-    android:viewportWidth="196"
-    android:viewportHeight="199">
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <path android:pathData="M32,4H76A28,28 0 0 1 104,32V76A28,28 0 0 1 76,104H32A28,28 0 0 1 4,76V32A28,28 0 0 1 32,4Z">
+    <aapt:attr name="android:fillColor">
+      <gradient
+          android:type="linear"
+          android:startX="4"
+          android:startY="4"
+          android:endX="104"
+          android:endY="104">
+        <item android:color="#FFB52B21" android:offset="0.0" />
+        <item android:color="#FFDC4D24" android:offset="0.52" />
+        <item android:color="#FFF49B2A" android:offset="1.0" />
+      </gradient>
+    </aapt:attr>
+  </path>
+  <group
+      android:pivotX="54"
+      android:pivotY="54"
+      android:scaleX="1.28"
+      android:scaleY="1.28">
     <path
-        android:fillColor="#FFF6B704"
-        android:pathData="M37.46 2.58c4.46-3.44 10.66-3.44 15.12 0l11.2 8.64c0.87 0.66 1.82 1.21 2.82 1.63l13.06 5.43c5.2 2.15 8.3 7.55 7.56 13.14L85.37 45.5c-0.14 1.08-0.14 2.18 0 3.26l1.85 14.07c0.74 5.59-2.36 10.98-7.56 13.15L66.6 81.39c-1 0.42-1.95 0.96-2.81 1.63l-11.2 8.64c-4.47 3.44-10.67 3.44-15.13 0l-11.2-8.64c-0.87-0.67-1.82-1.21-2.82-1.63l-13.06-5.42c-5.2-2.17-8.3-7.56-7.56-13.15l1.85-14.07c0.14-1.08 0.14-2.18 0-3.26L2.82 31.42c-0.74-5.6 2.37-10.99 7.56-13.14l13.06-5.43c1-0.42 1.95-0.97 2.81-1.63l11.21-8.64Z"/>
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M41,33H61A12,12 0 0 1 73,45V59A12,12 0 0 1 61,71H46.5L35.4,77.1C34.2,77.7 32.9,76.4 33.5,75.2L36.5,70.13A12,12 0 0 1 29,59V45A12,12 0 0 1 41,33Z" />
     <path
-        android:fillColor="#FFE54335"
-        android:pathData="M118.52 77.54c-14.84-14.85-14.84-38.93 0-53.78l12.6-12.62c14.85-14.85 38.9-14.85 53.75 0 14.84 14.85 14.84 38.93 0 53.78l-12.61 12.62c-14.84 14.85-38.9 14.85-53.74 0Z"/>
+        android:fillColor="#FFB83B1F"
+        android:pathData="M41.2,63.5V46.0H45.8L56.4,57.8V46.0H61.0V63.5H56.4L45.8,51.7V63.5Z" />
     <path
-        android:fillColor="#FF34A353"
-        android:pathData="M90.04 153.95c0-24.89-20.15-45.06-45.02-45.06C20.16 108.9 0 129.06 0 153.95 0 178.83 20.16 199 45.02 199c24.87 0 45.02-20.17 45.02-45.05Z"/>
+        android:fillColor="#00000000"
+        android:strokeColor="#FFEB8A1C"
+        android:strokeWidth="4.0"
+        android:strokeLineCap="round"
+        android:pathData="M41.8,41.0C44.3,37.2 48.2,37.2 51.0,39.7C53.8,42.2 57.7,42.2 60.2,38.4" />
     <path
-        android:fillColor="#FF4280EF"
-        android:pathData="M109.25 145.13c-7.86-18.12 10.52-36.52 28.64-28.64l3 1.3c5.52 2.4 11.8 2.4 17.33 0l3-1.3c18.1-7.88 36.49 10.52 28.62 28.64l-1.3 3c-2.4 5.54-2.4 11.82 0 17.35l1.3 3c7.87 18.13-10.51 36.52-28.63 28.65l-2.99-1.3c-5.53-2.4-11.81-2.4-17.34 0l-3 1.3c-18.1 7.87-36.5-10.53-28.63-28.65l1.3-3c2.41-5.53 2.41-11.81 0-17.35l-1.3-3Z"/>
+        android:fillColor="#FFFFDE73"
+        android:pathData="M73.0,27.8Q73.5,32.0 77.7,32.5Q73.5,33.0 73.0,37.2Q72.5,33.0 68.3,32.5Q72.5,32.0 73.0,27.8Z" />
+  </group>
 </vector>

@@ -16,6 +16,7 @@
 
 package com.google.ai.edge.gallery.spanish.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,7 +41,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.ai.edge.gallery.R
 import com.google.ai.edge.gallery.spanish.PronunciationPracticeMode
 import com.google.ai.edge.gallery.spanish.SpanishLearningSettings
@@ -98,30 +101,60 @@ fun SpanishPronunciationDock(
           label = { Text(item.label) },
         )
       }
-      Text(
-        text = "${settings.dialect.shortLabel} · ${settings.cefrLevel.code}",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp),
-      )
+      if (currentPhrase == null) {
+        Text(
+          text = "${settings.dialect.shortLabel} · ${settings.cefrLevel.code}",
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.padding(start = 4.dp),
+        )
+      }
     }
 
     if (currentPhrase != null) {
       Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
         colors =
           CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
           ),
       ) {
         Column(
-          modifier = Modifier.fillMaxWidth().padding(12.dp),
-          verticalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.fillMaxWidth().padding(14.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+          ) {
+            Text(
+              text = "DRILL PHRASE",
+              style =
+                MaterialTheme.typography.labelSmall.copy(
+                  letterSpacing = 0.8.sp,
+                  fontWeight = FontWeight.SemiBold,
+                ),
+              color = MaterialTheme.colorScheme.primary,
+            )
+            Surface(
+              shape = CircleShape,
+              color = MaterialTheme.colorScheme.secondaryContainer,
+              contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
+              Text(
+                text = "${settings.dialect.shortLabel} · ${settings.cefrLevel.code}",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+              )
+            }
+          }
           Text(
             text = currentPhrase.spanish,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
           )
           Text(
@@ -129,11 +162,17 @@ fun SpanishPronunciationDock(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
-          Text(
-            text = "Focus: ${currentPhrase.phoneticTip}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-          )
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+          ) {
+            Text(
+              text = "Focus: ${currentPhrase.phoneticTip}",
+              style = MaterialTheme.typography.labelSmall,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+          }
           Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -171,14 +210,17 @@ fun SpanishPronunciationDock(
               },
               label = { Text("Next") },
             )
-            OutlinedButton(onClick = onSavePhrase) {
-              Icon(
-                Icons.Rounded.BookmarkAdd,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-              )
-              Text(" Save", style = MaterialTheme.typography.labelMedium)
-            }
+            AssistChip(
+              onClick = onSavePhrase,
+              leadingIcon = {
+                Icon(
+                  Icons.Rounded.BookmarkAdd,
+                  contentDescription = null,
+                  modifier = Modifier.size(16.dp),
+                )
+              },
+              label = { Text("Save") },
+            )
           }
         }
       }
@@ -210,6 +252,18 @@ fun SpanishPronunciationEmptyState(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+      Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+      ) {
+        Text(
+          text = "Pronunciation Coach",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+      }
       Text(
         text = stringResource(R.string.askaudio_emptystate_title),
         style = emptyStateTitle,

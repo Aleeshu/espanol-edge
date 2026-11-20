@@ -16,6 +16,7 @@
 
 package com.google.ai.edge.gallery.spanish.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -107,7 +109,7 @@ fun SpanishTutorChatBar(
         label = { Text(stringResource(R.string.save_word_to_flashcards)) },
       )
       Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = CircleShape,
         color = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
       ) {
@@ -116,6 +118,7 @@ fun SpanishTutorChatBar(
             "${settings.dialect.shortLabel} · ${settings.cefrLevel.code}" +
               if (settings.inlineCorrections) " · Corrections ON" else "",
           style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.Medium,
           modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
       }
@@ -166,6 +169,18 @@ fun SpanishTutorEmptyState(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+      Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+      ) {
+        Text(
+          text = "¡A conversar!",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+      }
       Text(
         text = "${scenario.spanishTitle} · ${scenario.title}",
         style = emptyStateTitle,
@@ -184,6 +199,8 @@ fun SpanishTutorEmptyState(
         Card(
           onClick = { onStarterPromptClicked(starter.spanishText) },
           modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(16.dp),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
           colors =
             CardDefaults.cardColors(
               containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -210,6 +227,7 @@ fun SpanishTutorEmptyState(
               Icon(
                 Icons.AutoMirrored.Rounded.VolumeUp,
                 contentDescription = "Listen in Spanish",
+                tint = MaterialTheme.colorScheme.primary,
               )
             }
           }

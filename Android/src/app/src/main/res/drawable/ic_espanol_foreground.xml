@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <!-- Crisp rounded speech bubble inside the 66dp adaptive safe zone -->
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M41,33H61A12,12 0 0 1 73,45V59A12,12 0 0 1 61,71H46.5L35.4,77.1C34.2,77.7 32.9,76.4 33.5,75.2L36.5,70.13A12,12 0 0 1 29,59V45A12,12 0 0 1 41,33Z" />
+  <!-- Bold terracotta N -->
+  <path
+      android:fillColor="#FFB83B1F"
+      android:pathData="M41.2,63.5V46.0H45.8L56.4,57.8V46.0H61.0V63.5H56.4L45.8,51.7V63.5Z" />
+  <!-- Golden saffron tilde (~) completing Ñ -->
+  <path
+      android:fillColor="#00000000"
+      android:strokeColor="#FFEB8A1C"
+      android:strokeWidth="4.0"
+      android:strokeLineCap="round"
+      android:pathData="M41.8,41.0C44.3,37.2 48.2,37.2 51.0,39.7C53.8,42.2 57.7,42.2 60.2,38.4" />
+  <!-- Subtle 4-point AI sparkle star at top-right shoulder -->
+  <path
+      android:fillColor="#FFFFDE73"
+      android:pathData="M73.0,27.8Q73.5,32.0 77.7,32.5Q73.5,33.0 73.0,37.2Q72.5,33.0 68.3,32.5Q72.5,32.0 73.0,27.8Z" />
+</vector>

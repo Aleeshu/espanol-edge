@@ -28,6 +28,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,6 +61,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Error
@@ -183,6 +185,7 @@ fun HomeScreen(
   val spanishSettings by modelManagerViewModel.spanishLearningSettings.collectAsStateWithLifecycle()
   val hasGeminiKey by modelManagerViewModel.hasGeminiApiKeyFlow.collectAsStateWithLifecycle()
   val dueFlashcardsCount by spanishHomeViewModel.dueFlashcardsCount.collectAsStateWithLifecycle()
+  val totalFlashcardsCount by spanishHomeViewModel.totalFlashcardsCount.collectAsStateWithLifecycle()
   var showSettingsDialog by remember { mutableStateOf(false) }
   var showTosDialog by remember { mutableStateOf(!tosViewModel.getIsTosAccepted()) }
   val scope = rememberCoroutineScope()
@@ -379,6 +382,11 @@ fun HomeScreen(
                       scope.launch { drawerState.apply { if (isClosed) open() else close() } }
                     },
                   ),
+                rightAction =
+                  AppBarAction(
+                    actionType = AppBarActionType.APP_SETTING,
+                    actionFn = { showSettingsDialog = true },
+                  ),
               )
             }
           },
@@ -438,27 +446,12 @@ fun HomeScreen(
                 Column(
                   modifier =
                     Modifier.padding(horizontal = 24.dp)
-                      .padding(top = 24.dp, bottom = 16.dp)
+                      .padding(top = 12.dp, bottom = 12.dp)
                       .semantics(mergeDescendants = true) {},
-                  verticalArrangement = Arrangement.spacedBy(8.dp),
+                  verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                   AppTitle(enableAnimation = enableAnimation)
                   IntroText(enableAnimation = enableAnimation)
-                  if (isSpeechHighlightEnabled) {
-                    FeaturedIntroText(
-                      titleRes = R.string.try_speech_title,
-                      descriptionRes = R.string.try_speech_description,
-                      iconRes = R.drawable.ic_sound_sensing,
-                      enableAnimation = enableAnimation,
-                    )
-                  } else {
-                    FeaturedIntroText(
-                      titleRes = R.string.try_egv2_title,
-                      descriptionRes = R.string.try_egv2_description,
-                      iconRes = R.drawable.gemma_logo,
-                      enableAnimation = enableAnimation,
-                    )
-                  }
                   SpanishLearningStatusBanner(
                     dialectLabel = spanishSettings.dialect.shortLabel,
                     cefrCode = spanishSettings.cefrLevel.code,
@@ -501,6 +494,8 @@ fun HomeScreen(
                   sortedCategories = sortedCategories,
                   tasksByCategories = uiState.tasksByCategory,
                   isSpeechHighlightEnabled = isSpeechHighlightEnabled,
+                  dueFlashcardsCount = dueFlashcardsCount,
+                  totalFlashcardsCount = totalFlashcardsCount,
                   enableAnimation = enableAnimation,
                   navigateToTaskScreen = navigateToTaskScreen,
                 )
@@ -580,22 +575,47 @@ private fun AppTitle(enableAnimation: Boolean) {
   val annotatedText = buildAnnotatedString {
     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append(text1) }
     append(" ")
-    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) { append(text2) }
+    withStyle(
+      style =
+        SpanStyle(
+          brush = linearGradient(colors = MaterialTheme.customColors.appTitleGradientColors),
+          fontWeight = FontWeight.Bold,
+        )
+    ) {
+      append(text2)
+    }
   }
 
-  RevealingText(
-    text = "",
-    annotatedText = annotatedText,
-    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
-    animationDelay = 0,
-    animationDurationMs =
-      if (enableAnimation) {
-        (TITLE_FIRST_LINE_ANIMATION_DURATION + TITLE_SECOND_LINE_ANIMATION_DURATION)
-      } else {
-        0
-      },
-    extraTextPadding = 0.dp,
-  )
+  Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Surface(
+      shape = CircleShape,
+      color = MaterialTheme.colorScheme.primaryContainer,
+      contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    ) {
+      Text(
+        text = "¡HOLA! · TU ESTUDIO DE ESPAÑOL",
+        style =
+          MaterialTheme.typography.labelSmall.copy(
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.6.sp,
+          ),
+        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+      )
+    }
+    RevealingText(
+      text = "",
+      annotatedText = annotatedText,
+      style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+      animationDelay = 0,
+      animationDurationMs =
+        if (enableAnimation) {
+          (TITLE_FIRST_LINE_ANIMATION_DURATION + TITLE_SECOND_LINE_ANIMATION_DURATION)
+        } else {
+          0
+        },
+      extraTextPadding = 0.dp,
+    )
+  }
 }
 
 @Composable
@@ -634,41 +654,67 @@ private fun SpanishLearningStatusBanner(
   onOpenFlashcards: () -> Unit,
 ) {
   Card(
-    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-    shape = RoundedCornerShape(16.dp),
-    colors =
-      CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-      ),
+    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+    shape = RoundedCornerShape(20.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.customColors.taskCardBgColor),
+    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
   ) {
-    FlowRow(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalArrangement = Arrangement.spacedBy(6.dp),
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+      verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-      StatusBannerPill(
-        icon = Icons.Rounded.Translate,
-        text = "$dialectLabel · $cefrCode",
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        onClick = onOpenSettings,
-      )
-      StatusBannerPill(
-        icon = Icons.Rounded.Style,
-        text =
-          if (dueCount > 0) stringResource(R.string.flashcards_due_count, dueCount)
-          else "¡Al día!",
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        onClick = onOpenFlashcards,
-      )
-      StatusBannerPill(
-        icon = Icons.Rounded.AutoAwesome,
-        text = if (hasGeminiKey) "Cloud Ready" else "On-Device Mode",
-        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        onClick = onOpenSettings,
-      )
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+      ) {
+        Text(
+          text = "Today's Immersion",
+          style = MaterialTheme.typography.labelLarge,
+          fontWeight = FontWeight.SemiBold,
+          color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+          text = "Customize",
+          style = MaterialTheme.typography.labelMedium,
+          fontWeight = FontWeight.Medium,
+          color = MaterialTheme.colorScheme.primary,
+          modifier =
+            Modifier.clip(CircleShape)
+              .clickable(onClick = onOpenSettings)
+              .padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+      }
+      FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        StatusBannerPill(
+          icon = Icons.Rounded.Translate,
+          text = "$dialectLabel · $cefrCode",
+          containerColor = MaterialTheme.colorScheme.primaryContainer,
+          contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+          onClick = onOpenSettings,
+        )
+        StatusBannerPill(
+          icon = Icons.Rounded.Style,
+          text =
+            if (dueCount > 0) stringResource(R.string.flashcards_due_count, dueCount)
+            else "¡Al día!",
+          containerColor = MaterialTheme.colorScheme.secondaryContainer,
+          contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+          onClick = onOpenFlashcards,
+        )
+        StatusBannerPill(
+          icon = Icons.Rounded.AutoAwesome,
+          text = if (hasGeminiKey) "Cloud Ready" else "On-Device Mode",
+          containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+          contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+          onClick = onOpenSettings,
+        )
+      }
     }
   }
 }
@@ -750,64 +796,6 @@ private fun TryGm4IntroText(enableAnimation: Boolean) {
 }
 
 @Composable
-private fun FeaturedIntroText(
-  @StringRes titleRes: Int,
-  @StringRes descriptionRes: Int,
-  @DrawableRes iconRes: Int = R.drawable.gemma_logo,
-  enableAnimation: Boolean,
-) {
-  // fade in + slide up.
-  val progress =
-    if (!enableAnimation) {
-      1f
-    } else {
-      rememberDelayedAnimationProgress(
-        initialDelay = TITLE_SECOND_LINE_ANIMATION_START,
-        animationDurationMs = CONTENT_COMPOSABLES_ANIMATION_DURATION,
-        animationLabel = "intro text animation",
-      )
-    }
-  Row(
-    modifier =
-      Modifier.padding(top = 24.dp).graphicsLayer {
-        alpha = progress
-        translationY = (CONTENT_COMPOSABLES_OFFSET_Y.dp * (1 - progress)).toPx()
-      },
-    verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    Icon(
-      ImageVector.vectorResource(iconRes),
-      contentDescription = null,
-      modifier = Modifier.size(24.dp),
-      tint = MaterialTheme.colorScheme.primary,
-    )
-    Text(
-      text = stringResource(titleRes),
-      style =
-        MaterialTheme.typography.headlineSmall.copy(
-          fontWeight = FontWeight.Medium,
-          fontSize = 20.sp,
-          lineHeight = 24.sp,
-        ),
-      color = MaterialTheme.colorScheme.onSurface,
-      maxLines = 1,
-      autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = 20.sp, stepSize = 1.sp),
-    )
-  }
-
-  Text(
-    stringResource(descriptionRes),
-    style = MaterialTheme.typography.bodyMedium,
-    modifier =
-      Modifier.graphicsLayer {
-        alpha = progress
-        translationY = (CONTENT_COMPOSABLES_OFFSET_Y.dp * (1 - progress)).toPx()
-      },
-  )
-}
-
-@Composable
 private fun CategoryTabHeader(
   sortedCategories: List<CategoryInfo>,
   selectedIndex: Int,
@@ -878,7 +866,8 @@ private fun CategoryTabHeader(
           modifier = Modifier.padding(horizontal = 16.dp),
           style = MaterialTheme.typography.labelLarge,
           color =
-            if (selectedIndex == index) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            if (selectedIndex == index) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
     }
@@ -893,6 +882,8 @@ private fun TaskList(
   sortedCategories: List<CategoryInfo>,
   tasksByCategories: Map<String, List<Task>>,
   isSpeechHighlightEnabled: Boolean,
+  dueFlashcardsCount: Int,
+  totalFlashcardsCount: Int,
   enableAnimation: Boolean,
   navigateToTaskScreen: (Task) -> Unit,
 ) {
@@ -931,6 +922,13 @@ private fun TaskList(
         translationY = (CONTENT_COMPOSABLES_OFFSET_Y.dp * (1 - progress)).toPx()
       },
   ) {
+    Text(
+      text = "Start Practicing",
+      style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+      color = MaterialTheme.colorScheme.onSurface,
+      modifier = Modifier.padding(bottom = 2.dp),
+    )
+
     val chatDescription =
       stringResource(
         if (isSpeechHighlightEnabled) R.string.try_speech_chat_description
@@ -961,12 +959,12 @@ private fun TaskList(
       text = stringResource(R.string.explore_other_use_cases),
       style =
         MaterialTheme.typography.headlineSmall.copy(
-          fontWeight = FontWeight.Medium,
-          fontSize = 20.sp,
-          lineHeight = 24.sp,
+          fontWeight = FontWeight.SemiBold,
+          fontSize = 18.sp,
+          lineHeight = 22.sp,
         ),
       color = MaterialTheme.colorScheme.onSurface,
-      modifier = Modifier.padding(top = 22.dp, bottom = 16.dp),
+      modifier = Modifier.padding(top = 18.dp, bottom = 10.dp),
     )
   }
 
@@ -979,6 +977,14 @@ private fun TaskList(
       tasksByCategories[sortedCategories[pageIndex].id].orEmpty().filter {
         it.id !in taskIds
       }
+    fun statusBadgeFor(task: Task): String? =
+      if (task.id == BuiltInTaskId.SPANISH_FLASHCARDS) {
+        if (dueFlashcardsCount > 0) "$dueFlashcardsCount due · Offline"
+        else "$totalFlashcardsCount cards · Offline"
+      } else {
+        null
+      }
+
     Column(
       verticalArrangement = Arrangement.spacedBy(16.dp),
       modifier =
@@ -999,6 +1005,7 @@ private fun TaskList(
               (pageIndex == 0 || pageIndex == 1) && !initialAnimationDone && enableAnimation,
             onClick = { navigateToTaskScreen(tasks[i]) },
             modifier = Modifier.weight(1f),
+            statusBadgeOverride = statusBadgeFor(tasks[i]),
             square = true,
           )
 
@@ -1011,6 +1018,7 @@ private fun TaskList(
                 (pageIndex == 0 || pageIndex == 1) && !initialAnimationDone && enableAnimation,
               onClick = { navigateToTaskScreen(tasks[i + 1]) },
               modifier = Modifier.weight(1f),
+              statusBadgeOverride = statusBadgeFor(tasks[i + 1]),
               square = true,
             )
           } else {
@@ -1031,6 +1039,7 @@ private fun TaskCard(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
   description: String = "",
+  statusBadgeOverride: String? = null,
   square: Boolean = false,
 ) {
   // Observes the model count and updates the model count label with a fade-in/fade-out animation
@@ -1075,39 +1084,52 @@ private fun TaskCard(
       )
     else 1f
 
+  val displayedStatusLabel = statusBadgeOverride ?: curModelCountLabel
   val descText = if (description.isNotEmpty()) description else task.shortDescription
-  val baseCbTask = stringResource(R.string.cd_task_card, task.label, task.models.size)
+  val baseCbTask =
+    if (statusBadgeOverride != null) "${task.label}, $statusBadgeOverride"
+    else stringResource(R.string.cd_task_card, task.label, task.models.size)
   val cbTask = if (descText.isNotEmpty()) "$baseCbTask, $descText" else baseCbTask
+  val cardShape = RoundedCornerShape(22.dp)
   Card(
     modifier =
       modifier
-        .clip(RoundedCornerShape(24.dp))
+        .clip(cardShape)
         .clickable(onClick = onClick)
         .graphicsLayer { alpha = progress }
         .semantics(mergeDescendants = true) {
           contentDescription = cbTask
           role = Role.Button
         },
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    shape = cardShape,
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.customColors.taskCardBgColor),
   ) {
     if (square) {
       Column(
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize().padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
       ) {
         TaskIcon(task = task, width = 40.dp)
-        Column() {
-          Text(
-            curModelCountLabel,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-          )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+          Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+          ) {
+            Text(
+              text = displayedStatusLabel,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              style = MaterialTheme.typography.labelSmall,
+              maxLines = 1,
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+          }
           // Reserve two lines for the label so all grid tiles share the same height, even when a
           // long label (e.g. "Instant Media Search") wraps.
           Text(
             task.label,
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             minLines = 2,
             maxLines = 2,
           )
@@ -1124,15 +1146,15 @@ private fun TaskCard(
       }
     } else {
       Row(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 20.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
       ) {
         // Icon.
         TaskIcon(task = task, width = 40.dp)
 
         // Title and description.
-        Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
           Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1141,7 +1163,7 @@ private fun TaskCard(
             Text(
               task.label,
               color = MaterialTheme.colorScheme.onSurface,
-              style = MaterialTheme.typography.titleMedium,
+              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             )
             if (task.newFeature) {
               Box(
@@ -1167,6 +1189,13 @@ private fun TaskCard(
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 15.sp),
           )
         }
+
+        Icon(
+          imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.size(18.dp),
+        )
       }
     }
   }

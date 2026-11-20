@@ -16,6 +16,9 @@
 
 package com.google.ai.edge.gallery.spanish.flashcards
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -33,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -60,6 +64,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -81,11 +86,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.ai.edge.gallery.R
@@ -219,6 +227,38 @@ private fun StudyTabContent(
       )
     }
 
+    if (uiState.allCards.isNotEmpty()) {
+      val masteryFraction =
+        (uiState.masteredCount.toFloat() / uiState.allCards.size.toFloat()).coerceIn(0f, 1f)
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+            text = "Deck mastery",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Text(
+            text = "${uiState.masteredCount}/${uiState.allCards.size}",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+          )
+        }
+        LinearProgressIndicator(
+          progress = { masteryFraction },
+          modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+          trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
+      }
+    }
+
     if (uiState.practiceAllMode && uiState.dueCards.isEmpty()) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -246,17 +286,35 @@ private fun StudyTabContent(
         produceState<ImageBitmap?>(initialValue = null, key1 = card.word, key2 = card.learnLanguage) {
           value = viewModel.loadThumbnail(card)
         }
+      val density = LocalDensity.current.density
+      val flipRotation by
+        animateFloatAsState(
+          targetValue = if (uiState.isCardFlipped) 180f else 0f,
+          animationSpec = tween(durationMillis = 420),
+          label = "flashcardFlip",
+        )
+      val showBack = flipRotation > 90f
 
       Card(
-        modifier = Modifier.fillMaxWidth().clickable { viewModel.flipCard() },
-        shape = RoundedCornerShape(20.dp),
+        modifier =
+          Modifier.fillMaxWidth()
+            .graphicsLayer {
+              rotationY = flipRotation
+              cameraDistance = 14f * density
+            }
+            .clickable { viewModel.flipCard() },
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
         colors =
           CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
           ),
       ) {
         Column(
-          modifier = Modifier.fillMaxWidth().padding(20.dp),
+          modifier =
+            Modifier.fillMaxWidth()
+              .graphicsLayer { rotationY = if (showBack) 180f else 0f }
+              .padding(20.dp),
           horizontalAlignment = Alignment.CenterHorizontally,
           verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -275,74 +333,127 @@ private fun StudyTabContent(
               )
               Spacer(modifier = Modifier.size(4.dp))
               Text(
-                text = if (uiState.isCardFlipped) "Back" else "Tap to flip",
+                text = if (showBack) "Back" else "Tap to flip",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
               )
             }
           }
 
-          if (thumbnail != null) {
-            Image(
-              bitmap = thumbnail!!,
-              contentDescription = card.word,
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.size(112.dp).clip(RoundedCornerShape(14.dp)),
+          if (!showBack) {
+            Text(
+              text = "ESPAÑOL",
+              style =
+                MaterialTheme.typography.labelSmall.copy(
+                  letterSpacing = 1.sp,
+                  fontWeight = FontWeight.SemiBold,
+                ),
+              color = MaterialTheme.colorScheme.primary,
             )
-          }
 
-          Text(
-            text = card.word,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-          )
+            if (thumbnail != null) {
+              Image(
+                bitmap = thumbnail!!,
+                contentDescription = card.word,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(112.dp).clip(RoundedCornerShape(14.dp)),
+              )
+            }
 
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AssistChip(
-              onClick = { viewModel.speak(card.word, slow = false) },
-              leadingIcon = {
-                Icon(
-                  Icons.AutoMirrored.Rounded.VolumeUp,
-                  contentDescription = null,
-                  modifier = Modifier.size(16.dp),
-                )
-              },
-              label = { Text("1.0x") },
+            Text(
+              text = card.word,
+              style = MaterialTheme.typography.headlineMedium,
+              fontWeight = FontWeight.Bold,
+              textAlign = TextAlign.Center,
             )
-            AssistChip(
-              onClick = { viewModel.speak(card.word, slow = true) },
-              leadingIcon = {
-                Icon(
-                  Icons.Rounded.SlowMotionVideo,
-                  contentDescription = null,
-                  modifier = Modifier.size(16.dp),
-                )
-              },
-              label = { Text("0.7x Slow") },
-            )
-          }
 
-          if (!uiState.isCardFlipped) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              AssistChip(
+                onClick = { viewModel.speak(card.word, slow = false) },
+                leadingIcon = {
+                  Icon(
+                    Icons.AutoMirrored.Rounded.VolumeUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                  )
+                },
+                label = { Text("1.0x") },
+              )
+              AssistChip(
+                onClick = { viewModel.speak(card.word, slow = true) },
+                leadingIcon = {
+                  Icon(
+                    Icons.Rounded.SlowMotionVideo,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                  )
+                },
+                label = { Text("0.7x Slow") },
+              )
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
             Button(
               onClick = viewModel::flipCard,
               modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(14.dp),
             ) {
               Text("Show Answer")
             }
           } else {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             Text(
-              text = card.translation,
-              style = MaterialTheme.typography.titleLarge,
-              color = MaterialTheme.colorScheme.primary,
+              text = "SIGNIFICADO",
+              style =
+                MaterialTheme.typography.labelSmall.copy(
+                  letterSpacing = 1.sp,
+                  fontWeight = FontWeight.SemiBold,
+                ),
+              color = MaterialTheme.colorScheme.secondary,
+            )
+            Text(
+              text = card.word,
+              style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.SemiBold,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
               textAlign = TextAlign.Center,
             )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+            Text(
+              text = card.translation,
+              style = MaterialTheme.typography.headlineSmall,
+              color = MaterialTheme.colorScheme.primary,
+              fontWeight = FontWeight.Bold,
+              textAlign = TextAlign.Center,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              AssistChip(
+                onClick = { viewModel.speak(card.word, slow = false) },
+                leadingIcon = {
+                  Icon(
+                    Icons.AutoMirrored.Rounded.VolumeUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                  )
+                },
+                label = { Text("1.0x") },
+              )
+              AssistChip(
+                onClick = { viewModel.speak(card.word, slow = true) },
+                leadingIcon = {
+                  Icon(
+                    Icons.Rounded.SlowMotionVideo,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                  )
+                },
+                label = { Text("0.7x Slow") },
+              )
+            }
             if (card.targetSentence.isNotBlank()) {
               Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
+                border =
+                  BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth(),
               ) {
@@ -372,6 +483,7 @@ private fun StudyTabContent(
                     Icon(
                       Icons.AutoMirrored.Rounded.VolumeUp,
                       contentDescription = "Play sentence",
+                      tint = MaterialTheme.colorScheme.primary,
                     )
                   }
                 }
@@ -413,6 +525,7 @@ private fun StudyTabContent(
             Button(
               onClick = { viewModel.rateCurrentCard(rating) },
               modifier = Modifier.weight(1f),
+              shape = RoundedCornerShape(14.dp),
               contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp),
               colors =
                 when (rating) {
@@ -435,7 +548,11 @@ private fun StudyTabContent(
                 },
             ) {
               Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(rating.label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(
+                  rating.label,
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.Bold,
+                )
                 Text(intervalLabel, style = MaterialTheme.typography.labelSmall)
               }
             }
@@ -509,6 +626,8 @@ private fun DeckCardItem(
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(16.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
   ) {
     Row(
@@ -572,6 +691,7 @@ private fun CaughtUpCard(
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(20.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
   ) {
     Column(
@@ -620,7 +740,8 @@ private fun CaughtUpCard(
 private fun StatPill(label: String, value: String, modifier: Modifier = Modifier) {
   Surface(
     modifier = modifier,
-    shape = RoundedCornerShape(12.dp),
+    shape = RoundedCornerShape(14.dp),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     color = MaterialTheme.colorScheme.surfaceContainer,
   ) {
     Column(
