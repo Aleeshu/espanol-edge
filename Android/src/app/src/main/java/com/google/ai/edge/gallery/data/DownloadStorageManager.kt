@@ -332,6 +332,14 @@ class DownloadStorageManager(
   fun getModelDownloadStatus(model: Model): ModelDownloadStatus {
     Log.d(TAG, "Checking model ${model.name} download status...")
 
+    if (model.isGeminiCloud) {
+      return ModelDownloadStatus(
+        status = ModelDownloadStatusType.SUCCEEDED,
+        receivedBytes = 0,
+        totalBytes = 0,
+      )
+    }
+
     if (model.downloadInfo.localRelativeDirPathOverride.isNotEmpty()) {
       Log.d(TAG, "Model has localRelativeDirPathOverride set. Set status to SUCCEEDED")
       return ModelDownloadStatus(
@@ -399,6 +407,7 @@ class DownloadStorageManager(
   }
 
   fun isModelDownloaded(model: Model): Boolean {
+    if (model.isGeminiCloud) return true
     if (checkIfModelDownloaded(model, model.downloadInfo.version)) return true
     for (updatableFile in model.downloadInfo.updatableModelFiles) {
       if (updatableFile.commitHash.isEmpty()) continue

@@ -45,6 +45,10 @@ data class BackendSpec(
   val isLiteRtLm: Boolean
     get() = runtimeType == RuntimeType.LITERT_LM
 
+  /** Indicates whether the runtime type is Cloud Gemini API. */
+  val isGeminiCloud: Boolean
+    get() = runtimeType == RuntimeType.GEMINI_CLOUD
+
   /** Whether models using this backend are downloaded via [DownloadRepository]. */
   val downloadsViaRepository: Boolean
     get() = runtimeType.downloadsViaRepository

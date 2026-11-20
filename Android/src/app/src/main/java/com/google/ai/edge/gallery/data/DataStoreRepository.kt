@@ -21,19 +21,27 @@ import com.google.ai.edge.gallery.proto.AccessTokenData
 import com.google.ai.edge.gallery.proto.AsrSettingsProto
 import com.google.ai.edge.gallery.proto.BenchmarkResult
 import com.google.ai.edge.gallery.proto.BenchmarkResults
+import com.google.ai.edge.gallery.proto.CefrLevel
 import com.google.ai.edge.gallery.proto.Cutout
 import com.google.ai.edge.gallery.proto.CutoutCollection
 import com.google.ai.edge.gallery.proto.ImportedModel
 import com.google.ai.edge.gallery.proto.Settings
 import com.google.ai.edge.gallery.proto.Skill
 import com.google.ai.edge.gallery.proto.Skills
+import com.google.ai.edge.gallery.proto.SpanishDialect
 import com.google.ai.edge.gallery.proto.SupplementaryModelFilterProto
 import com.google.ai.edge.gallery.proto.Theme
 import com.google.ai.edge.gallery.proto.TtsSettingsProto
 import com.google.ai.edge.gallery.proto.UserData
 import com.google.ai.edge.gallery.proto.copy
+import com.google.ai.edge.gallery.spanish.SpanishLearningSettings
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+
+const val SECRET_KEY_GEMINI_API_KEY = "gemini_api_key"
 
 interface DataStoreRepository {
   fun saveTextInputHistory(history: List<String>)
@@ -173,6 +181,37 @@ interface DataStoreRepository {
 
   /** Returns the name of the main model last launched for each task, by task id. */
   suspend fun readLastMainModels(): Map<String, String>
+
+  /** Observes Spanish learning settings (dialect, CEFR level, tutor preferences). */
+  val spanishLearningSettingsFlow: Flow<SpanishLearningSettings>
+    get() = flowOf(SpanishLearningSettings())
+
+  fun readSpanishLearningSettings(): SpanishLearningSettings = SpanishLearningSettings()
+
+  fun saveSpanishDialect(dialect: SpanishDialect) {}
+
+  fun saveCefrLevel(level: CefrLevel) {}
+
+  fun saveInlineCorrectionsEnabled(enabled: Boolean) {}
+
+  fun saveShowEnglishHints(enabled: Boolean) {}
+
+  fun saveAutoReadSpanishAloud(enabled: Boolean) {}
+
+  fun saveGeminiApiKey(apiKey: String) {
+    val trimmed = apiKey.trim()
+    if (trimmed.isEmpty()) {
+      deleteSecret(SECRET_KEY_GEMINI_API_KEY)
+    } else {
+      saveSecret(SECRET_KEY_GEMINI_API_KEY, trimmed)
+    }
+  }
+
+  fun readGeminiApiKey(): String? = readSecret(SECRET_KEY_GEMINI_API_KEY)?.takeIf { it.isNotBlank() }
+
+  fun clearGeminiApiKey() {
+    deleteSecret(SECRET_KEY_GEMINI_API_KEY)
+  }
 }
 
 /** Repository for managing data using Proto DataStore. */
@@ -573,4 +612,47 @@ class DefaultDataStoreRepository(
 
   override suspend fun readLastMainModels(): Map<String, String> =
     dataStore.data.first().lastMainModelByTaskMap
+
+  override val spanishLearningSettingsFlow: Flow<SpanishLearningSettings>
+    get() = dataStore.data.map { SpanishLearningSettings.fromProto(it) }
+
+  override fun readSpanishLearningSettings(): SpanishLearningSettings {
+    return runBlocking { SpanishLearningSettings.fromProto(dataStore.data.first()) }
+  }
+
+  override fun saveSpanishDialect(dialect: SpanishDialect) {
+    runBlocking {
+      dataStore.updateData { settings -> settings.toBuilder().setSpanishDialect(dialect).build() }
+    }
+  }
+
+  override fun saveCefrLevel(level: CefrLevel) {
+    runBlocking {
+      dataStore.updateData { settings -> settings.toBuilder().setSpanishCefrLevel(level).build() }
+    }
+  }
+
+  override fun saveInlineCorrectionsEnabled(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setInlineCorrectionsEnabled(enabled).build()
+      }
+    }
+  }
+
+  override fun saveShowEnglishHints(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setShowEnglishHints(enabled).build()
+      }
+    }
+  }
+
+  override fun saveAutoReadSpanishAloud(enabled: Boolean) {
+    runBlocking {
+      dataStore.updateData { settings ->
+        settings.toBuilder().setAutoReadSpanishAloud(enabled).build()
+      }
+    }
+  }
 }

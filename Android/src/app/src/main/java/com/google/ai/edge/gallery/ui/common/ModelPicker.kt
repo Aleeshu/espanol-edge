@@ -129,10 +129,11 @@ fun ModelPicker(
                 downloadStatus = modelManagerUiState.modelDownloadStatus[model.name],
               )
               Text(
-                if (model.downloadInfo.localRelativeDirPathOverride.isEmpty()) {
-                  model.downloadInfo.sizeInBytes.humanReadableSize()
-                } else {
-                  "{ext_file_dir}/${model.downloadInfo.localRelativeDirPathOverride}"
+                when {
+                  model.isGeminiCloud -> stringResource(R.string.cloud_instant_badge)
+                  model.downloadInfo.localRelativeDirPathOverride.isEmpty() ->
+                    model.downloadInfo.sizeInBytes.humanReadableSize()
+                  else -> "{ext_file_dir}/${model.downloadInfo.localRelativeDirPathOverride}"
                 },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = labelSmallNarrow.copy(lineHeight = 10.sp),

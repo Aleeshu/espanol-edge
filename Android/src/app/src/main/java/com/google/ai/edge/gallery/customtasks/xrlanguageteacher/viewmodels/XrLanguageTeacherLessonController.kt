@@ -43,6 +43,7 @@ import com.google.ai.edge.gallery.proto.DictionaryEntry
 import com.google.ai.edge.gallery.proto.Language
 import com.google.ai.edge.gallery.runtime.EXTRA_CONTEXT_MULTI_TURN_VISION_SESSION
 import com.google.ai.edge.gallery.runtime.runtimeHelper
+import com.google.ai.edge.gallery.spanish.SpanishPromptBuilder
 import com.google.ai.edge.litertlm.Contents
 import kotlin.math.max
 import kotlinx.coroutines.Job
@@ -72,14 +73,12 @@ fun XrLanguageTeacherViewModel.registerModelForSessionPrewarm(model: Model) {
         learnLanguage.value == savedLearnLanguage.value
     if (canAdoptInitializedConversation) {
       val persona = selectedPersona.value
-      val customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona)
       val systemPromptText =
-        systemPromptOverride.value
-          ?: persona.buildSystemPrompt(
-            mainLangName = mainLanguage.value.toEnglishName(fallback = "English"),
-            learnLangName = learnLanguage.value.toEnglishName(fallback = "Spanish"),
-            customTemplate = customTemplate,
-          )
+        buildEffectiveSystemPrompt(
+          persona = persona,
+          mainLang = mainLanguage.value,
+          learnLang = learnLanguage.value,
+        )
       hasPendingPreferencePrewarm = false
       isConversationInitialized = true
       activeConversationTurnCount = 0
@@ -111,14 +110,12 @@ fun XrLanguageTeacherViewModel.prewarmConversationSession(
   val targetModel = model ?: return
   latestKnownModel = targetModel
   if (targetModel.instance == null) return
-  val customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona)
   val systemPromptText =
-    systemPromptOverride.value
-      ?: persona.buildSystemPrompt(
-        mainLangName = mainLang.toEnglishName(fallback = "English"),
-        learnLangName = learnLang.toEnglishName(fallback = "Spanish"),
-        customTemplate = customTemplate,
-      )
+    buildEffectiveSystemPrompt(
+      persona = persona,
+      mainLang = mainLang,
+      learnLang = learnLang,
+    )
   activePrewarmJob?.cancel()
   cancelFillerPresynthesis()
   activePrewarmJob =
@@ -144,14 +141,12 @@ fun XrLanguageTeacherViewModel.captureSessionBitmap(bitmap: Bitmap?, model: Mode
   val persona = selectedPersona.value
   val mainLang = mainLanguage.value
   val learnLang = learnLanguage.value
-  val customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona)
   val systemPromptText =
-    systemPromptOverride.value
-      ?: persona.buildSystemPrompt(
-        mainLangName = mainLang.toEnglishName(fallback = "English"),
-        learnLangName = learnLang.toEnglishName(fallback = "Spanish"),
-        customTemplate = customTemplate,
-      )
+    buildEffectiveSystemPrompt(
+      persona = persona,
+      mainLang = mainLang,
+      learnLang = learnLang,
+    )
   activePrewarmJob?.cancel()
   cancelFillerPresynthesis()
   activePrewarmJob =
@@ -208,14 +203,12 @@ fun XrLanguageTeacherViewModel.runLessonTurn(
   val learnLang = learnLanguage.value
   val mainLangName = mainLang.toEnglishName(fallback = "English")
   val learnLangName = learnLang.toEnglishName(fallback = "Spanish")
-  val customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona)
   val systemPromptText =
-    systemPromptOverride.value
-      ?: persona.buildSystemPrompt(
-        mainLangName = mainLangName,
-        learnLangName = learnLangName,
-        customTemplate = customTemplate,
-      )
+    buildEffectiveSystemPrompt(
+      persona = persona,
+      mainLang = mainLang,
+      learnLang = learnLang,
+    )
   val previousTeacherDialogue = stateSnapshot.teacherDialogue
   val previousChatTurns = stateSnapshot.chatTurns
   turnStartTeacherDialogue = if (isFirstTurn) "" else previousTeacherDialogue
@@ -375,7 +368,7 @@ fun XrLanguageTeacherViewModel.runLessonTurn(
         // turn's image carry across turns.
         extraContext =
           buildMap {
-            if (model.isAiCore) {
+            if (model.isAiCore || model.isGeminiCloud) {
               put(EXTRA_CONTEXT_MULTI_TURN_VISION_SESSION, "true")
             }
           },
@@ -737,4 +730,24 @@ internal fun XrLanguageTeacherViewModel.resetLessonSessionInternal(
     prewarmSession = prewarmSession,
     stopTts = stopTts,
   )
+}
+
+internal fun XrLanguageTeacherViewModel.buildEffectiveSystemPrompt(
+  persona: CharacterPersona,
+  mainLang: Language,
+  learnLang: Language,
+): String {
+  systemPromptOverride.value?.let { return it }
+  val customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona)
+  val basePrompt =
+    persona.buildSystemPrompt(
+      mainLangName = mainLang.toEnglishName(fallback = "English"),
+      learnLangName = learnLang.toEnglishName(fallback = "Spanish"),
+      customTemplate = customTemplate,
+    )
+  return if (learnLang == Language.LANGUAGE_SPANISH) {
+    basePrompt + SpanishPromptBuilder.buildCameraDialectAddon(dataStoreRepository.readSpanishLearningSettings())
+  } else {
+    basePrompt
+  }
 }

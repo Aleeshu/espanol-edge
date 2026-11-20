@@ -61,6 +61,7 @@ import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.views.isTeacherS
 import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.xr.XrGlassesManager
 import com.google.ai.edge.gallery.data.BuiltInTaskId
 import com.google.ai.edge.gallery.data.ChatSessionRepository
+import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.data.Model
 import com.google.ai.edge.gallery.data.SpeechEngineError
 import com.google.ai.edge.gallery.data.SpeechEngineErrorCause
@@ -266,6 +267,7 @@ constructor(
   internal val ttsSettingsRepository: TtsSettingsRepository,
   internal val speechSelectionUseCase: SpeechSelectionUseCase,
   internal val chatSessionRepository: ChatSessionRepository,
+  internal val dataStoreRepository: DataStoreRepository,
   internal val pcmAudioStreamPlayer: PcmAudioStreamPlayer,
   internal val xrGlassesManager: XrGlassesManager,
   @DefaultDispatcher internal val inferenceDispatcher: CoroutineDispatcher,

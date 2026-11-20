@@ -220,7 +220,7 @@ fun ModelNameAndStatus(
       statusContent == null &&
         !model.autoDownloadsOnStartup &&
         showModelSizeAndDownloadProgressLabel &&
-        (model.supportsTopLevelDownload || showStatusForNonDownloadable)
+        (model.supportsTopLevelDownload || showStatusForNonDownloadable || model.isGeminiCloud)
     ) {
       ModelStatusDetails(
         model = model,
@@ -297,7 +297,12 @@ fun ModelStatusDetails(
     }
     // Status label
     else {
-      var sizeLabel = model.downloadInfo.totalBytes.humanReadableSize()
+      var sizeLabel =
+        if (model.isGeminiCloud) {
+          stringResource(R.string.cloud_instant_badge)
+        } else {
+          model.downloadInfo.totalBytes.humanReadableSize()
+        }
       if (model.downloadInfo.localRelativeDirPathOverride.isNotEmpty()) {
         sizeLabel = "{ext_files_dir}/${model.downloadInfo.localRelativeDirPathOverride}"
       }

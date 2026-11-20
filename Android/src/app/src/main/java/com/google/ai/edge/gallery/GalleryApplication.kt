@@ -20,6 +20,7 @@ import android.app.Application
 import android.os.Process
 import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.notifications.NotificationScheduleManager
+import com.google.ai.edge.gallery.runtime.gemini.GeminiApiKeyStore
 import com.google.ai.edge.gallery.services.tts.TtsMemoryTrimCallbacks
 import com.google.ai.edge.gallery.ui.theme.ThemeSettings
 import com.google.firebase.FirebaseApp
@@ -46,8 +47,9 @@ class GalleryApplication : Application() {
     // disk.
     notificationScheduleManager.initialize()
 
-    // Load saved theme.
+    // Load saved theme and initialize Gemini Cloud key facade.
     ThemeSettings.themeOverride.value = dataStoreRepository.readTheme()
+    GeminiApiKeyStore.initialize(dataStoreRepository)
 
     FirebaseApp.initializeApp(this)
     firebaseAnalytics?.setAnalyticsCollectionEnabled(dataStoreRepository.readFirebaseAnalytics())

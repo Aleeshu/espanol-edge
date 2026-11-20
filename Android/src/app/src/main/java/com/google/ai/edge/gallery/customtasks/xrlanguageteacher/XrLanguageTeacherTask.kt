@@ -125,13 +125,16 @@ import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.views.studyview.
 import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.views.vocabview.DictionaryScreen
 import com.google.ai.edge.gallery.data.BuiltInTaskId
 import com.google.ai.edge.gallery.data.Category
+import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.data.Model
 import com.google.ai.edge.gallery.data.ModelSelectionConfig
 import com.google.ai.edge.gallery.data.ModelSelectionTarget
 import com.google.ai.edge.gallery.data.Task
 import com.google.ai.edge.gallery.proto.Dictionary
 import com.google.ai.edge.gallery.proto.Language
+import com.google.ai.edge.gallery.runtime.gemini.GeminiCloudModels
 import com.google.ai.edge.gallery.runtime.runtimeHelper
+import com.google.ai.edge.gallery.spanish.SpanishPromptBuilder
 import com.google.ai.edge.gallery.ui.common.ModelDownloadGatesHost
 import com.google.ai.edge.gallery.ui.common.onboarding.OnboardingViewModel
 import com.google.ai.edge.gallery.ui.common.rememberModelDownloadGates
@@ -156,6 +159,7 @@ constructor(
   private val context: Context,
   @XrLanguageTeacherDictionary private val dictionaryDataStore: DataStore<Dictionary>? = null,
   private val storageRepository: XrLanguageTeacherPreferencesStore? = null,
+  private val dataStoreRepository: DataStoreRepository? = null,
   private val initDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : CustomTask {
   @Inject
@@ -163,7 +167,8 @@ constructor(
     context: Context,
     @XrLanguageTeacherDictionary dictionaryDataStore: DataStore<Dictionary>,
     storageRepository: XrLanguageTeacherPreferencesStore,
-  ) : this(context, dictionaryDataStore, storageRepository, Dispatchers.Default)
+    dataStoreRepository: DataStoreRepository,
+  ) : this(context, dictionaryDataStore, storageRepository, dataStoreRepository, Dispatchers.Default)
 
   override val task: Task =
     Task(
@@ -180,6 +185,8 @@ constructor(
       models = mutableListOf(),
       modelNames =
         listOf(
+          GeminiCloudModels.GEMINI_2_5_FLASH_NAME,
+          GeminiCloudModels.GEMINI_2_5_FLASH_LITE_NAME,
           "Gemma 4 E2B (Gemini Nano via AICore)",
           "Gemma 4 E4B (Gemini Nano via AICore)",
           "Gemma-4-E2B-it TPU",
@@ -211,7 +218,7 @@ constructor(
       }
       val overridePrompt = repo.getSystemPromptOverride()
       val customTemplate = repo.getCustomPersonaPromptTemplate(persona)
-      val systemPromptText =
+      val baseSystemPromptText =
         customPromptOverride
           ?: overridePrompt
           ?: persona.buildSystemPrompt(
@@ -219,6 +226,20 @@ constructor(
             learnLangName = learnLang.toEnglishName(fallback = "Spanish"),
             customTemplate = customTemplate,
           )
+      val systemPromptText =
+        if (
+          customPromptOverride == null &&
+            overridePrompt == null &&
+            learnLang == Language.LANGUAGE_SPANISH &&
+            dataStoreRepository != null
+        ) {
+          baseSystemPromptText +
+            SpanishPromptBuilder.buildCameraDialectAddon(
+              dataStoreRepository.readSpanishLearningSettings()
+            )
+        } else {
+          baseSystemPromptText
+        }
       val resolvedSystemInstruction = Contents.of(systemPromptText)
 
       model.runtimeHelper.initialize(

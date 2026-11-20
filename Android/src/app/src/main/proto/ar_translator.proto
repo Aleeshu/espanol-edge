@@ -50,6 +50,15 @@ message DictionaryEntry {
   // word's photo, so that it is not segmented again when it had no foreground
   // object. The sticker cutout itself is saved as a PNG file next to the photo.
   bool sticker_segmentation_attempted = 8;
+
+  // Spaced repetition (SM-2) and learning metadata (tags 9-15).
+  int64 next_review_at_ms = 9;
+  int32 interval_days = 10;
+  int32 repetitions = 11;
+  float ease_factor = 12;
+  int64 last_reviewed_at_ms = 13;
+  string source_module = 14;
+  string notes = 15;
 }
 
 message Dictionary {

@@ -83,16 +83,22 @@ import com.google.ai.edge.gallery.firebaseAnalytics
 import com.google.ai.edge.gallery.huggingface.HfUrlInfo
 import com.google.ai.edge.gallery.huggingface.HuggingFaceApiClient
 import com.google.ai.edge.gallery.proto.AccessTokenData
+import com.google.ai.edge.gallery.proto.CefrLevel
 import com.google.ai.edge.gallery.proto.HfModelItemProto
 import com.google.ai.edge.gallery.proto.ImportedModel
+import com.google.ai.edge.gallery.proto.SpanishDialect
 import com.google.ai.edge.gallery.proto.Theme
 import com.google.ai.edge.gallery.runtime.aicore.AICoreModelDownloader
+import com.google.ai.edge.gallery.runtime.gemini.GeminiApiKeyStore
+import com.google.ai.edge.gallery.runtime.gemini.GeminiCloudModelDownloader
+import com.google.ai.edge.gallery.runtime.gemini.GeminiCloudModels
 import com.google.ai.edge.gallery.services.asr.AsrEngineType
 import com.google.ai.edge.gallery.services.asr.AsrServiceProvider
 import com.google.ai.edge.gallery.services.asr.AsrSettingsRepository
 import com.google.ai.edge.gallery.services.asr.SystemSpeechAsrService
 import com.google.ai.edge.gallery.services.tts.TtsSettingsRepository
 import com.google.ai.edge.gallery.services.tts.TtsSettingsUiState
+import com.google.ai.edge.gallery.spanish.SpanishLearningSettings
 import com.google.ai.edge.gallery.ui.common.isMemoryLow
 import com.google.ai.edge.litertlm.Contents
 import com.google.gson.Gson
@@ -114,8 +120,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -318,11 +326,13 @@ private val RESET_CONVERSATION_TURN_COUNT_CONFIG =
 private val PREDEFINED_LLM_TASK_ORDER =
   listOf(
     BuiltInTaskId.LLM_CHAT,
+    BuiltInTaskId.LLM_XR_LANGUAGE_TEACHER,
+    BuiltInTaskId.SPANISH_FLASHCARDS,
+    BuiltInTaskId.LLM_ASK_AUDIO,
     BuiltInTaskId.LLM_AGENT_CHAT,
     BuiltInTaskId.SMART_ALBUM,
     BuiltInTaskId.VIDEO_MOMENT_FINDER,
     BuiltInTaskId.LLM_ASK_IMAGE,
-    BuiltInTaskId.LLM_ASK_AUDIO,
     BuiltInTaskId.LLM_PROMPT_LAB,
     BuiltInTaskId.LLM_TINY_GARDEN,
     BuiltInTaskId.LLM_MOBILE_ACTIONS,
@@ -512,6 +522,7 @@ constructor(
         RuntimeType.UNKNOWN to LiteRtLmModelDownloader(context, downloadRepository),
         RuntimeType.LITERT_LM to LiteRtLmModelDownloader(context, downloadRepository),
         RuntimeType.AICORE to AICoreModelDownloader(context),
+        RuntimeType.GEMINI_CLOUD to GeminiCloudModelDownloader(),
       ),
     ossModelImportLogger = ossModelImportLogger,
     networkStateProvider = networkStateProvider,
@@ -693,7 +704,7 @@ constructor(
   }
 
   fun getActiveCustomTasks(): List<CustomTask> {
-    return customTasks.toList()
+    return customTasks.filter { it.task.id in BuiltInTaskId.ACTIVE_SPANISH_TASK_IDS }
   }
 
   fun getSelectedModel(): Model? {
@@ -1737,6 +1748,50 @@ constructor(
     dataStoreRepository.saveTheme(theme = theme)
   }
 
+  val spanishLearningSettings: StateFlow<SpanishLearningSettings> =
+    dataStoreRepository.spanishLearningSettingsFlow.stateIn(
+      scope = viewModelScope,
+      started = SharingStarted.WhileSubscribed(5_000),
+      initialValue = SpanishLearningSettings(),
+    )
+
+  private val _hasGeminiApiKeyFlow = MutableStateFlow(GeminiApiKeyStore.hasApiKey())
+  val hasGeminiApiKeyFlow: StateFlow<Boolean> = _hasGeminiApiKeyFlow.asStateFlow()
+
+  fun saveSpanishDialect(dialect: SpanishDialect) {
+    dataStoreRepository.saveSpanishDialect(dialect)
+  }
+
+  fun saveCefrLevel(level: CefrLevel) {
+    dataStoreRepository.saveCefrLevel(level)
+  }
+
+  fun saveInlineCorrectionsEnabled(enabled: Boolean) {
+    dataStoreRepository.saveInlineCorrectionsEnabled(enabled)
+  }
+
+  fun saveShowEnglishHints(enabled: Boolean) {
+    dataStoreRepository.saveShowEnglishHints(enabled)
+  }
+
+  fun saveAutoReadSpanishAloud(enabled: Boolean) {
+    dataStoreRepository.saveAutoReadSpanishAloud(enabled)
+  }
+
+  fun readGeminiApiKey(): String = dataStoreRepository.readGeminiApiKey().orEmpty()
+
+  fun hasGeminiApiKey(): Boolean = _hasGeminiApiKeyFlow.value
+
+  fun saveGeminiApiKey(apiKey: String) {
+    GeminiApiKeyStore.saveApiKey(apiKey)
+    _hasGeminiApiKeyFlow.value = GeminiApiKeyStore.hasApiKey()
+  }
+
+  fun clearGeminiApiKey() {
+    GeminiApiKeyStore.clearApiKey()
+    _hasGeminiApiKeyFlow.value = false
+  }
+
   /**
    * Retrieves whether Firebase Analytics collection is currently enabled.
    *
@@ -2328,6 +2383,7 @@ constructor(
           }
         }
         registerAllowlistSpeechModels(_supplementaryModels)
+        registerGeminiCloudModels(curTasks = curTasks, nameToModel = nameToModel)
 
         // Find models from allowlist if a task's `modelNames` field is not empty.
         Log.d(TAG, "loadModelAllowlist: Processing task modelNames")
@@ -2384,6 +2440,7 @@ constructor(
 
   fun clearLoadModelAllowlistError() {
     val curTasks = getActiveCustomTasks().map { it.task }
+    registerGeminiCloudModels(curTasks = curTasks, nameToModel = mutableMapOf())
     processTasks()
     _uiState.update {
       createUiState()
@@ -2393,6 +2450,24 @@ constructor(
           loadingModelAllowlistError = "",
           tasksByCategory = groupTasksByCategory(),
         )
+    }
+  }
+
+  private fun registerGeminiCloudModels(
+    curTasks: List<Task>,
+    nameToModel: MutableMap<String, Model>,
+  ) {
+    for (cloudModel in GeminiCloudModels.allModels()) {
+      if (_allowlistModels.none { it.name == cloudModel.name }) {
+        _allowlistModels.add(cloudModel)
+      }
+      nameToModel[cloudModel.name] = cloudModel
+      for (taskId in GeminiCloudModels.targetTaskIds) {
+        val task = curTasks.find { it.id == taskId } ?: continue
+        if (task.models.none { it.name == cloudModel.name }) {
+          task.models.add(cloudModel)
+        }
+      }
     }
   }
 
@@ -2678,9 +2753,14 @@ constructor(
    * downloaded, or not downloaded at all.
    */
   fun getModelDownloadStatus(model: Model): ModelDownloadStatus =
-    storageManager.getModelDownloadStatus(model)
+    if (model.isGeminiCloud) {
+      ModelDownloadStatus(status = ModelDownloadStatusType.SUCCEEDED)
+    } else {
+      storageManager.getModelDownloadStatus(model)
+    }
 
-  fun isModelDownloaded(model: Model): Boolean = storageManager.isModelDownloaded(model)
+  fun isModelDownloaded(model: Model): Boolean =
+    model.isGeminiCloud || storageManager.isModelDownloaded(model)
 }
 
 private fun getAllowlistUrl(version: String): String {

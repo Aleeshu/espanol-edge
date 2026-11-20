@@ -27,6 +27,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,11 +48,13 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MultiChoiceSegmentedButtonRow
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -75,6 +79,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -85,6 +90,10 @@ import com.google.ai.edge.gallery.BuildConfig
 import com.google.ai.edge.gallery.R
 import com.google.ai.edge.gallery.proto.Theme
 import com.google.ai.edge.gallery.services.asr.AsrEngineType
+import com.google.ai.edge.gallery.spanish.SELECTABLE_CEFR_LEVELS
+import com.google.ai.edge.gallery.spanish.SELECTABLE_SPANISH_DIALECTS
+import com.google.ai.edge.gallery.spanish.code
+import com.google.ai.edge.gallery.spanish.displayName
 import com.google.ai.edge.gallery.ui.common.ClickableLink
 import com.google.ai.edge.gallery.ui.common.tos.AppTosDialog
 import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
@@ -120,6 +129,9 @@ fun SettingsDialog(
   var isFocused by remember { mutableStateOf(false) }
   val focusRequester = remember { FocusRequester() }
   val interactionSource = remember { MutableInteractionSource() }
+  val spanishSettings by modelManagerViewModel.spanishLearningSettings.collectAsStateWithLifecycle()
+  val hasGeminiKey by modelManagerViewModel.hasGeminiApiKeyFlow.collectAsStateWithLifecycle()
+  var geminiKeyInput by remember { mutableStateOf("") }
   var showTos by remember { mutableStateOf(false) }
 
   LaunchedEffect(Unit) { modelManagerViewModel.checkAsrEngineSupport() }
@@ -210,6 +222,150 @@ fun SettingsDialog(
                     )
                   },
                 )
+              }
+            }
+          }
+
+          // Spanish Learning Preferences.
+          @OptIn(ExperimentalLayoutApi::class)
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            Text(
+              stringResource(R.string.spanish_settings_section_title),
+              style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+            )
+            Text(
+              stringResource(R.string.spanish_dialect_label),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+              for (dialect in SELECTABLE_SPANISH_DIALECTS) {
+                FilterChip(
+                  selected = spanishSettings.dialect == dialect,
+                  onClick = { modelManagerViewModel.saveSpanishDialect(dialect) },
+                  label = { Text(dialect.displayName, style = MaterialTheme.typography.labelMedium) },
+                )
+              }
+            }
+            Text(
+              stringResource(R.string.spanish_cefr_label),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+              for (level in SELECTABLE_CEFR_LEVELS) {
+                FilterChip(
+                  selected = spanishSettings.cefrLevel == level,
+                  onClick = { modelManagerViewModel.saveCefrLevel(level) },
+                  label = { Text(level.code, style = MaterialTheme.typography.labelMedium) },
+                )
+              }
+            }
+            Row(
+              modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+              Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(
+                  stringResource(R.string.spanish_inline_corrections_title),
+                  style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                )
+                Text(
+                  stringResource(R.string.spanish_inline_corrections_desc),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+              Switch(
+                checked = spanishSettings.inlineCorrections,
+                onCheckedChange = { modelManagerViewModel.saveInlineCorrectionsEnabled(it) },
+              )
+            }
+            Row(
+              modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+              Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text(
+                  stringResource(R.string.spanish_english_hints_title),
+                  style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                )
+                Text(
+                  stringResource(R.string.spanish_english_hints_desc),
+                  style = MaterialTheme.typography.bodySmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+              }
+              Switch(
+                checked = spanishSettings.showEnglishHints,
+                onCheckedChange = { modelManagerViewModel.saveShowEnglishHints(it) },
+              )
+            }
+          }
+
+          // Hybrid Cloud AI (Gemini API).
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+          ) {
+            Text(
+              stringResource(R.string.gemini_cloud_section_title),
+              style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium),
+            )
+            Text(
+              stringResource(
+                if (hasGeminiKey) R.string.gemini_cloud_status_ready
+                else R.string.gemini_cloud_status_offline
+              ),
+              style = MaterialTheme.typography.bodySmall,
+              color =
+                if (hasGeminiKey) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedTextField(
+              value = geminiKeyInput,
+              onValueChange = { geminiKeyInput = it },
+              singleLine = true,
+              visualTransformation = PasswordVisualTransformation(),
+              placeholder = {
+                Text(
+                  stringResource(R.string.gemini_api_key_placeholder),
+                  style = MaterialTheme.typography.bodySmall,
+                )
+              },
+              modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              Button(
+                onClick = {
+                  modelManagerViewModel.saveGeminiApiKey(geminiKeyInput)
+                  geminiKeyInput = ""
+                  focusManager.clearFocus()
+                },
+                enabled = geminiKeyInput.isNotBlank(),
+              ) {
+                Text("Save key")
+              }
+              OutlinedButton(
+                onClick = {
+                  modelManagerViewModel.clearGeminiApiKey()
+                  geminiKeyInput = ""
+                  focusManager.clearFocus()
+                },
+                enabled = hasGeminiKey,
+              ) {
+                Text("Clear")
               }
             }
           }

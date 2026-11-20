@@ -88,7 +88,7 @@ fun XrLanguageTeacherViewModel.saveCurrentVocabCard(cardToSave: VocabCardData? =
       learnLanguage = learnLanguage.value,
       definition =
         storageRepository.getString(R.string.xrteacher_identified_by_persona, personaDisplayName),
-    )
+    ).toBuilder().setSourceModule("camera").build()
   val bitmap = state.capturedBitmap
   val sticker = if (bitmap != null) state.stickerFor(card) else null
   val keepsPhotoOnly = bitmap != null && state.usesOriginalPhoto(stickerKey(card.word))
@@ -258,8 +258,41 @@ private suspend fun XrLanguageTeacherViewModel.writeDictionaryEntry(
             currentDictionary.getEntries(existingIndex).stickerSegmentationAttempted
           else -> entry.stickerSegmentationAttempted
         }
+      val existingEntry =
+        if (existingIndex >= 0) currentDictionary.getEntries(existingIndex) else null
       val entryToSave =
-        entry.toBuilder().setStickerSegmentationAttempted(stickerSegmentationAttempted).build()
+        entry
+          .toBuilder()
+          .setStickerSegmentationAttempted(stickerSegmentationAttempted)
+          .apply {
+            if (existingEntry != null) {
+              if (nextReviewAtMs == 0L && existingEntry.nextReviewAtMs > 0L) {
+                setNextReviewAtMs(existingEntry.nextReviewAtMs)
+              }
+              if (intervalDays == 0 && existingEntry.intervalDays > 0) {
+                setIntervalDays(existingEntry.intervalDays)
+              }
+              if (repetitions == 0 && existingEntry.repetitions > 0) {
+                setRepetitions(existingEntry.repetitions)
+              }
+              if (easeFactor <= 0f && existingEntry.easeFactor > 0f) {
+                setEaseFactor(existingEntry.easeFactor)
+              }
+              if (lastReviewedAtMs == 0L && existingEntry.lastReviewedAtMs > 0L) {
+                setLastReviewedAtMs(existingEntry.lastReviewedAtMs)
+              }
+              if (sourceModule.isBlank() && existingEntry.sourceModule.isNotBlank()) {
+                setSourceModule(existingEntry.sourceModule)
+              }
+              if (notes.isBlank() && existingEntry.notes.isNotBlank()) {
+                setNotes(existingEntry.notes)
+              }
+            }
+            if (sourceModule.isBlank()) {
+              setSourceModule("camera")
+            }
+          }
+          .build()
       if (existingIndex >= 0) {
         currentDictionary.toBuilder().setEntries(existingIndex, entryToSave).build()
       } else {

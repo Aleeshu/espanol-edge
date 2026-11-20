@@ -68,12 +68,14 @@ import androidx.navigation.navArgument
 import com.google.ai.edge.gallery.GalleryEvent
 import com.google.ai.edge.gallery.customtasks.common.CustomTaskData
 import com.google.ai.edge.gallery.customtasks.common.CustomTaskDataForBuiltinTask
+import com.google.ai.edge.gallery.data.BuiltInTaskId
 import com.google.ai.edge.gallery.data.Model
 import com.google.ai.edge.gallery.data.ModelDownloadStatusType
 import com.google.ai.edge.gallery.data.ModelSelectionTarget
 import com.google.ai.edge.gallery.data.Task
 import com.google.ai.edge.gallery.data.isLegacyTasks
 import com.google.ai.edge.gallery.firebaseAnalytics
+import com.google.ai.edge.gallery.spanish.flashcards.SpanishFlashcardsScreen
 import com.google.ai.edge.gallery.ui.benchmark.BenchmarkScreen
 import com.google.ai.edge.gallery.ui.common.ErrorDialog
 import com.google.ai.edge.gallery.ui.common.LocalTestAllowlistDialog
@@ -102,6 +104,7 @@ private const val ROUTE_BENCHMARK = "benchmark"
 private const val ROUTE_MODEL_MANAGER = "model_manager"
 private const val ARG_IMPORT_URL = "import_url"
 private const val ROUTE_NOTIFICATIONS = "notifications"
+private const val ROUTE_SPANISH_FLASHCARDS = "spanish_flashcards"
 private const val ENTER_ANIMATION_DURATION_MS = 500
 private val ENTER_ANIMATION_EASING = EaseOutExpo
 private const val ENTER_ANIMATION_DELAY_MS = 100
@@ -204,9 +207,13 @@ fun GalleryNavHost(
         tosViewModel = tosViewModel,
         enableAnimation = enableHomeScreenAnimation,
         navigateToTaskScreen = { task ->
-          pickedTask = task
-          enableModelListAnimation = true
-          navController.navigate(ROUTE_MODEL_LIST)
+          if (task.id == BuiltInTaskId.SPANISH_FLASHCARDS) {
+            navController.navigate(ROUTE_SPANISH_FLASHCARDS)
+          } else {
+            pickedTask = task
+            enableModelListAnimation = true
+            navController.navigate(ROUTE_MODEL_LIST)
+          }
           firebaseAnalytics?.logEvent(
             GalleryEvent.CAPABILITY_SELECT.id,
             Bundle().apply { putString("capability_name", task.id) },
@@ -521,6 +528,20 @@ fun GalleryNavHost(
           },
         )
       }
+    }
+
+    // Spanish Flashcards & SM-2 Spaced Repetition (direct entry without model picker).
+    composable(
+      route = ROUTE_SPANISH_FLASHCARDS,
+      enterTransition = { slideEnter() },
+      exitTransition = { slideExit() },
+    ) {
+      SpanishFlashcardsScreen(
+        navigateUp = {
+          enableHomeScreenAnimation = false
+          navController.navigateUp()
+        }
+      )
     }
   }
 

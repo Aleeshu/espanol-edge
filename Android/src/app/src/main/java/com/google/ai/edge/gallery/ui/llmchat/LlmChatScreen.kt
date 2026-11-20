@@ -185,6 +185,9 @@ fun LlmAskAudioScreen(
   allowEditingSystemPrompt: Boolean = false,
   curSystemPrompt: String = "",
   onSystemPromptChanged: (String) -> Unit = {},
+  composableBelowMessageList: @Composable (Model) -> Unit = {},
+  emptyStateComposable: (@Composable (Model) -> Unit)? = null,
+  sendMessageTrigger: SendMessageTrigger? = null,
 ) {
   ChatViewWrapper(
     viewModel = viewModel,
@@ -192,35 +195,38 @@ fun LlmAskAudioScreen(
     taskId = BuiltInTaskId.LLM_ASK_AUDIO,
     navigateUp = navigateUp,
     modifier = modifier,
+    composableBelowMessageList = composableBelowMessageList,
     allowEditingSystemPrompt = allowEditingSystemPrompt,
     curSystemPrompt = curSystemPrompt,
     onSystemPromptChanged = onSystemPromptChanged,
+    sendMessageTrigger = sendMessageTrigger,
     showImagePicker = false,
     showAudioPicker = true,
-    emptyStateComposable = {
-      Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-          modifier =
-            Modifier.align(Alignment.Center)
-              .verticalScroll(rememberScrollState())
-              .padding(horizontal = 48.dp, vertical = 12.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-          Text(
-            stringResource(R.string.askaudio_emptystate_title),
-            style = emptyStateTitle,
-            modifier = Modifier.semantics { heading() },
-          )
-          Text(
-            stringResource(R.string.askaudio_emptystate_content),
-            style = emptyStateContent,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-          )
+    emptyStateComposable =
+      emptyStateComposable ?: {
+        Box(modifier = Modifier.fillMaxSize()) {
+          Column(
+            modifier =
+              Modifier.align(Alignment.Center)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 48.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+          ) {
+            Text(
+              stringResource(R.string.askaudio_emptystate_title),
+              style = emptyStateTitle,
+              modifier = Modifier.semantics { heading() },
+            )
+            Text(
+              stringResource(R.string.askaudio_emptystate_content),
+              style = emptyStateContent,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center,
+            )
+          }
         }
-      }
-    },
+      },
   )
 }
 

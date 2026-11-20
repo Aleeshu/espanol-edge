@@ -94,6 +94,14 @@ enum class RuntimeType(
     supportsDelete = false,
     installsLanguagePacks = true,
   ),
+  @SerializedName("gemini_cloud")
+  GEMINI_CLOUD(
+    downloadsViaRepository = false,
+    autoDownloadsOnStartup = false,
+    supportsTopLevelDownload = false,
+    supportsDelete = false,
+    installsLanguagePacks = false,
+  ),
 }
 
 enum class AICoreModelReleaseStage {

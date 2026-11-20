@@ -43,6 +43,7 @@ import com.google.ai.edge.gallery.data.SpeechEngineKind
 import com.google.ai.edge.gallery.data.supplementary.SpeechModality
 import com.google.ai.edge.gallery.proto.Language
 import com.google.ai.edge.gallery.services.asr.AsrServiceStatus
+import com.google.ai.edge.gallery.spanish.SpanishPromptBuilder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.SharingStarted
@@ -435,11 +436,18 @@ fun XrLanguageTeacherViewModel.buildDefaultSystemPrompt(
   mainLanguage: Language,
   learnLanguage: Language,
 ): String {
-  return persona.buildSystemPrompt(
-    mainLangName = mainLanguage.toEnglishName(fallback = "English"),
-    learnLangName = learnLanguage.toEnglishName(fallback = "Spanish"),
-    customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona),
-  )
+  val basePrompt =
+    persona.buildSystemPrompt(
+      mainLangName = mainLanguage.toEnglishName(fallback = "English"),
+      learnLangName = learnLanguage.toEnglishName(fallback = "Spanish"),
+      customTemplate = storageRepository.getCustomPersonaPromptTemplate(persona),
+    )
+  return if (learnLanguage == Language.LANGUAGE_SPANISH) {
+    basePrompt +
+      SpanishPromptBuilder.buildCameraDialectAddon(dataStoreRepository.readSpanishLearningSettings())
+  } else {
+    basePrompt
+  }
 }
 
 /**

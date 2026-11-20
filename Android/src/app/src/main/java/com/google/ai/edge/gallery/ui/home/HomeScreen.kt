@@ -34,6 +34,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,10 +61,13 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Style
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +79,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -116,6 +122,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.ai.edge.gallery.GalleryTopAppBar
 import com.google.ai.edge.gallery.R
 import com.google.ai.edge.gallery.data.AppBarAction
@@ -124,6 +132,9 @@ import com.google.ai.edge.gallery.data.BuiltInTaskId
 import com.google.ai.edge.gallery.data.Category
 import com.google.ai.edge.gallery.data.CategoryInfo
 import com.google.ai.edge.gallery.data.Task
+import com.google.ai.edge.gallery.spanish.code
+import com.google.ai.edge.gallery.spanish.shortLabel
+import com.google.ai.edge.gallery.spanish.ui.SpanishHomeViewModel
 import com.google.ai.edge.gallery.ui.common.RevealingText
 import com.google.ai.edge.gallery.ui.common.TaskIcon
 import com.google.ai.edge.gallery.ui.common.buildTrackableUrlAnnotatedString
@@ -166,8 +177,12 @@ fun HomeScreen(
   onNotificationsClicked: () -> Unit,
   enableAnimation: Boolean,
   modifier: Modifier = Modifier,
+  spanishHomeViewModel: SpanishHomeViewModel = hiltViewModel(),
 ) {
   val uiState by modelManagerViewModel.uiState.collectAsState()
+  val spanishSettings by modelManagerViewModel.spanishLearningSettings.collectAsStateWithLifecycle()
+  val hasGeminiKey by modelManagerViewModel.hasGeminiApiKeyFlow.collectAsStateWithLifecycle()
+  val dueFlashcardsCount by spanishHomeViewModel.dueFlashcardsCount.collectAsStateWithLifecycle()
   var showSettingsDialog by remember { mutableStateOf(false) }
   var showTosDialog by remember { mutableStateOf(!tosViewModel.getIsTosAccepted()) }
   val scope = rememberCoroutineScope()
@@ -444,6 +459,18 @@ fun HomeScreen(
                       enableAnimation = enableAnimation,
                     )
                   }
+                  SpanishLearningStatusBanner(
+                    dialectLabel = spanishSettings.dialect.shortLabel,
+                    cefrCode = spanishSettings.cefrLevel.code,
+                    dueCount = dueFlashcardsCount,
+                    hasGeminiKey = hasGeminiKey,
+                    onOpenSettings = { showSettingsDialog = true },
+                    onOpenFlashcards = {
+                      modelManagerViewModel
+                        .getTaskById(BuiltInTaskId.SPANISH_FLASHCARDS)
+                        ?.let(navigateToTaskScreen)
+                    },
+                  )
                 }
 
                 // Tab header for categories.
@@ -548,8 +575,8 @@ fun HomeScreen(
 
 @Composable
 private fun AppTitle(enableAnimation: Boolean) {
-  val text1 = "Google"
-  val text2 = "AI Edge Gallery"
+  val text1 = "Español"
+  val text2 = "Edge"
   val annotatedText = buildAnnotatedString {
     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append(text1) }
     append(" ")
@@ -573,11 +600,6 @@ private fun AppTitle(enableAnimation: Boolean) {
 
 @Composable
 private fun IntroText(enableAnimation: Boolean) {
-  val litertUrl = "https://huggingface.co/litert-community"
-
-  // Intro text animation:
-  //
-  // fade in + slide up.
   val progress =
     if (!enableAnimation) {
       1f
@@ -589,33 +611,91 @@ private fun IntroText(enableAnimation: Boolean) {
       )
     }
 
-  val introText = buildAnnotatedString {
-    val gemma4Url = "https://ai.google.dev/gemma"
-    append("${stringResource(R.string.gemma4_intro_part_1)} ")
-    append(
-      buildTrackableUrlAnnotatedString(
-        url = litertUrl,
-        linkText = stringResource(R.string.litert_community_label),
-      )
-    )
-    append("${stringResource(R.string.gemma4_intro_part_2)} ")
-    append(
-      buildTrackableUrlAnnotatedString(
-        url = gemma4Url,
-        linkText = stringResource(R.string.gemma4_label),
-      )
-    )
-    append(".")
-  }
   Text(
-    introText,
+    text = stringResource(R.string.espanol_intro_subtitle),
     style = MaterialTheme.typography.bodyMedium,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
     modifier =
       Modifier.graphicsLayer {
         alpha = progress
         translationY = (CONTENT_COMPOSABLES_OFFSET_Y.dp * (1 - progress)).toPx()
       },
   )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SpanishLearningStatusBanner(
+  dialectLabel: String,
+  cefrCode: String,
+  dueCount: Int,
+  hasGeminiKey: Boolean,
+  onOpenSettings: () -> Unit,
+  onOpenFlashcards: () -> Unit,
+) {
+  Card(
+    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+    shape = RoundedCornerShape(16.dp),
+    colors =
+      CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+      ),
+  ) {
+    FlowRow(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      StatusBannerPill(
+        icon = Icons.Rounded.Translate,
+        text = "$dialectLabel · $cefrCode",
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        onClick = onOpenSettings,
+      )
+      StatusBannerPill(
+        icon = Icons.Rounded.Style,
+        text =
+          if (dueCount > 0) stringResource(R.string.flashcards_due_count, dueCount)
+          else "¡Al día!",
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        onClick = onOpenFlashcards,
+      )
+      StatusBannerPill(
+        icon = Icons.Rounded.AutoAwesome,
+        text = if (hasGeminiKey) "Cloud Ready" else "On-Device Mode",
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        onClick = onOpenSettings,
+      )
+    }
+  }
+}
+
+@Composable
+private fun StatusBannerPill(
+  icon: ImageVector,
+  text: String,
+  containerColor: Color,
+  contentColor: Color,
+  onClick: () -> Unit,
+) {
+  Surface(
+    onClick = onClick,
+    shape = CircleShape,
+    color = containerColor,
+    contentColor = contentColor,
+  ) {
+    Row(
+      modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+      Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
+      Text(text = text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+    }
+  }
 }
 
 @Composable
@@ -840,12 +920,7 @@ private fun TaskList(
     initialAnimationDone = true
   }
 
-  val taskIds =
-    if (isSpeechHighlightEnabled) {
-      listOf(BuiltInTaskId.LLM_XR_LANGUAGE_TEACHER, BuiltInTaskId.LLM_CHAT)
-    } else {
-      listOf(BuiltInTaskId.SMART_ALBUM, BuiltInTaskId.VIDEO_MOMENT_FINDER)
-    }
+  val taskIds = listOf(BuiltInTaskId.LLM_CHAT, BuiltInTaskId.LLM_XR_LANGUAGE_TEACHER)
 
   // The highlighted tiles at the top.
   Column(
@@ -870,7 +945,7 @@ private fun TaskList(
         BuiltInTaskId.SMART_ALBUM to stringResource(R.string.task_desc_smart_album),
         BuiltInTaskId.VIDEO_MOMENT_FINDER to stringResource(R.string.task_desc_video_moment_finder),
       )
-    for (task in taskIds.map { modelManagerViewModel.getTaskById(it)!! }) {
+    for (task in taskIds.mapNotNull { modelManagerViewModel.getTaskById(it) }) {
       TaskCard(
         task = task,
         index = 0,
@@ -900,11 +975,9 @@ private fun TaskList(
     verticalAlignment = Alignment.Top,
     contentPadding = PaddingValues(horizontal = 20.dp),
   ) { pageIndex ->
-    // Featured tasks are also listed in the grid when speech is highlighted; otherwise they are
-    // de-duplicated from it.
     val tasks =
       tasksByCategories[sortedCategories[pageIndex].id].orEmpty().filter {
-        isSpeechHighlightEnabled || it.id !in taskIds
+        it.id !in taskIds
       }
     Column(
       verticalArrangement = Arrangement.spacedBy(16.dp),

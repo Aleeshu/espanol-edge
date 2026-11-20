@@ -48,6 +48,7 @@ import com.google.ai.edge.gallery.proto.Settings
 import com.google.ai.edge.gallery.proto.Skills
 import com.google.ai.edge.gallery.proto.UserData
 import com.google.ai.edge.gallery.runtime.aicore.AICoreModelDownloader
+import com.google.ai.edge.gallery.runtime.gemini.GeminiCloudModelDownloader
 import com.squareup.moshi.Moshi
 import dagger.Module
 import dagger.Provides
@@ -239,6 +240,14 @@ internal object AppModule {
   @RuntimeTypeKey(RuntimeType.AICORE)
   fun provideAICoreModelDownloader(@ApplicationContext context: Context): ModelDownloader {
     return AICoreModelDownloader(context)
+  }
+
+  @Provides
+  @Singleton
+  @IntoMap
+  @RuntimeTypeKey(RuntimeType.GEMINI_CLOUD)
+  fun provideGeminiCloudModelDownloader(): ModelDownloader {
+    return GeminiCloudModelDownloader()
   }
 
   @Provides

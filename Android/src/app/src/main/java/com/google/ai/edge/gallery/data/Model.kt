@@ -213,6 +213,10 @@ data class Model(
   val isLiteRtLm: Boolean
     get() = backendSpec.isLiteRtLm
 
+  /** Indicates whether the runtime type is Cloud Gemini API. */
+  val isGeminiCloud: Boolean
+    get() = backendSpec.isGeminiCloud
+
   /** Whether this model is downloaded as a local file via [DownloadRepository]. */
   val downloadsViaRepository: Boolean
     get() = backendSpec.downloadsViaRepository

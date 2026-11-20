@@ -34,6 +34,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.google.ai.edge.gallery.spanish.SpanishPromptBuilder
+import com.google.ai.edge.gallery.spanish.ui.SpanishPronunciationDock
+import com.google.ai.edge.gallery.spanish.ui.SpanishPronunciationEmptyState
+import com.google.ai.edge.gallery.spanish.ui.SpanishPronunciationViewModel
+import com.google.ai.edge.gallery.spanish.ui.SpanishTutorChatBar
+import com.google.ai.edge.gallery.spanish.ui.SpanishTutorEmptyState
+import com.google.ai.edge.gallery.spanish.ui.SpanishTutorViewModel
+import com.google.ai.edge.gallery.ui.common.chat.ChatMessageText
+import com.google.ai.edge.gallery.ui.common.chat.ChatSide
+import com.google.ai.edge.gallery.ui.common.chat.SendMessageTrigger
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -259,7 +272,104 @@ constructor(@ApplicationContext context: Context, @AiChatExecutor executor: Agen
     shortDescriptionRes = R.string.task_short_desc_ai_chat,
     emptyStateTitleRes = R.string.aichat_emptystate_title,
     emptyStateContentRes = R.string.aichat_emptystate_content,
-  )
+  ) {
+  @Composable
+  override fun MainScreen(data: Any) {
+    val myData = data as CustomTaskDataForBuiltinTask
+    val viewModel: LlmChatViewModel = hiltViewModel()
+    val spanishTutorViewModel: SpanishTutorViewModel = hiltViewModel()
+
+    LaunchedEffect(task) { viewModel.loadSystemPrompt(task) }
+
+    val modelManagerUiState by myData.modelManagerViewModel.uiState.collectAsStateWithLifecycle()
+    val selectedModel = modelManagerUiState.selectedModel
+    val modelInitStatus by selectedModel.initStatusFlow.collectAsStateWithLifecycle()
+    val spanishSettings by spanishTutorViewModel.settings.collectAsStateWithLifecycle()
+    val selectedScenario by spanishTutorViewModel.selectedScenario.collectAsStateWithLifecycle()
+    val saveFeedback by spanishTutorViewModel.saveFeedback.collectAsStateWithLifecycle()
+
+    var manualPromptOverride by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(spanishSettings, selectedScenario) { manualPromptOverride = null }
+
+    val effectivePrompt =
+      manualPromptOverride
+        ?: remember(spanishSettings, selectedScenario) {
+          spanishTutorViewModel.buildSystemPrompt(spanishSettings, selectedScenario)
+        }
+    val systemPromptUpdatedMessage = stringResource(R.string.system_prompt_updated)
+
+    var lastAppliedModelName by remember { mutableStateOf("") }
+    var lastAppliedPrompt by remember { mutableStateOf("") }
+    LaunchedEffect(effectivePrompt, selectedModel.name, modelInitStatus) {
+      viewModel.setUISystemPrompt(effectivePrompt)
+      if (modelInitStatus is Model.InitializationStatus.Initialized) {
+        if (lastAppliedModelName != selectedModel.name) {
+          lastAppliedModelName = selectedModel.name
+          lastAppliedPrompt = effectivePrompt
+        } else if (lastAppliedPrompt != effectivePrompt) {
+          lastAppliedPrompt = effectivePrompt
+          viewModel.applySystemPromptChange(
+            task = task,
+            model = selectedModel,
+            newPrompt = effectivePrompt,
+            systemPromptUpdatedMessage = systemPromptUpdatedMessage,
+          )
+        }
+      }
+    }
+
+    var sendMessageTrigger by remember { mutableStateOf<SendMessageTrigger?>(null) }
+
+    LlmChatScreen(
+      modelManagerViewModel = myData.modelManagerViewModel,
+      navigateUp = myData.onNavUp,
+      viewModel = viewModel,
+      taskId = task.id,
+      allowEditingSystemPrompt = true,
+      curSystemPrompt = effectivePrompt,
+      showImagePicker = true,
+      showAudioPicker = true,
+      showTextFilePicker = true,
+      sendMessageTrigger = sendMessageTrigger,
+      onSystemPromptChanged = { newPrompt ->
+        manualPromptOverride = newPrompt
+        lastAppliedPrompt = newPrompt
+        viewModel.applySystemPromptChange(
+          task = task,
+          model = selectedModel,
+          newPrompt = newPrompt,
+          systemPromptUpdatedMessage = systemPromptUpdatedMessage,
+        )
+      },
+      composableBelowMessageList = {
+        SpanishTutorChatBar(
+          settings = spanishSettings,
+          selectedScenario = selectedScenario,
+          saveFeedback = saveFeedback,
+          onSelectScenario = spanishTutorViewModel::selectScenario,
+          onSaveWord = { word, translation, example ->
+            spanishTutorViewModel.saveVocabWord(word, translation, example)
+          },
+          onDismissFeedback = spanishTutorViewModel::clearSaveFeedback,
+        )
+      },
+      emptyStateComposable = { model ->
+        SpanishTutorEmptyState(
+          settings = spanishSettings,
+          scenario = selectedScenario,
+          onStarterPromptClicked = { starter ->
+            sendMessageTrigger =
+              SendMessageTrigger(
+                model = model,
+                messages = listOf(ChatMessageText(content = starter, side = ChatSide.USER)),
+              )
+          },
+          onSpeakPrompt = { spanishText -> spanishTutorViewModel.speakSpanish(spanishText) },
+        )
+      },
+    )
+  }
+}
 
 @Module
 @InstallIn(SingletonComponent::class) // Or another component that fits your scope
@@ -429,22 +539,82 @@ constructor(
   override fun MainScreen(data: Any) {
     val myData = data as CustomTaskDataForBuiltinTask
     val viewModel: LlmAskAudioViewModel = hiltViewModel()
+    val pronunciationViewModel: SpanishPronunciationViewModel = hiltViewModel()
+
     LaunchedEffect(task) { viewModel.loadSystemPrompt(task) }
-    val uiSystemPrompt by viewModel.uiSystemPrompt.collectAsStateWithLifecycle()
+
+    val modelManagerUiState by myData.modelManagerViewModel.uiState.collectAsStateWithLifecycle()
+    val selectedModel = modelManagerUiState.selectedModel
+    val modelInitStatus by selectedModel.initStatusFlow.collectAsStateWithLifecycle()
+    val spanishSettings by pronunciationViewModel.settings.collectAsStateWithLifecycle()
+    val practiceMode by pronunciationViewModel.mode.collectAsStateWithLifecycle()
+    val currentPhrase by pronunciationViewModel.currentPhrase.collectAsStateWithLifecycle()
+    val saveFeedback by pronunciationViewModel.saveFeedback.collectAsStateWithLifecycle()
+
+    var manualPromptOverride by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(spanishSettings, practiceMode, currentPhrase) { manualPromptOverride = null }
+
+    val effectivePrompt =
+      manualPromptOverride
+        ?: remember(spanishSettings, practiceMode, currentPhrase) {
+          pronunciationViewModel.buildSystemPrompt(spanishSettings, practiceMode, currentPhrase)
+        }
     val systemPromptUpdatedMessage = stringResource(R.string.system_prompt_updated)
+
+    var lastAppliedModelName by remember { mutableStateOf("") }
+    var lastAppliedPrompt by remember { mutableStateOf("") }
+    LaunchedEffect(effectivePrompt, selectedModel.name, modelInitStatus) {
+      viewModel.setUISystemPrompt(effectivePrompt)
+      if (modelInitStatus is Model.InitializationStatus.Initialized) {
+        if (lastAppliedModelName != selectedModel.name) {
+          lastAppliedModelName = selectedModel.name
+          lastAppliedPrompt = effectivePrompt
+        } else if (lastAppliedPrompt != effectivePrompt) {
+          lastAppliedPrompt = effectivePrompt
+          viewModel.applySystemPromptChange(
+            task = task,
+            model = selectedModel,
+            newPrompt = effectivePrompt,
+            systemPromptUpdatedMessage = systemPromptUpdatedMessage,
+          )
+        }
+      }
+    }
+
     LlmAskAudioScreen(
       modelManagerViewModel = myData.modelManagerViewModel,
       navigateUp = myData.onNavUp,
       viewModel = viewModel,
       allowEditingSystemPrompt = true,
-      curSystemPrompt = uiSystemPrompt,
+      curSystemPrompt = effectivePrompt,
       onSystemPromptChanged = { newPrompt ->
-        val selectedModel = myData.modelManagerViewModel.uiState.value.selectedModel
+        manualPromptOverride = newPrompt
+        lastAppliedPrompt = newPrompt
         viewModel.applySystemPromptChange(
           task = task,
           model = selectedModel,
           newPrompt = newPrompt,
           systemPromptUpdatedMessage = systemPromptUpdatedMessage,
+        )
+      },
+      composableBelowMessageList = {
+        SpanishPronunciationDock(
+          settings = spanishSettings,
+          mode = practiceMode,
+          currentPhrase = currentPhrase,
+          saveFeedback = saveFeedback,
+          onSelectMode = pronunciationViewModel::selectMode,
+          onListenNormal = { pronunciationViewModel.playCurrentPhrase(slow = false) },
+          onListenSlow = { pronunciationViewModel.playCurrentPhrase(slow = true) },
+          onNextPhrase = pronunciationViewModel::nextPhrase,
+          onSavePhrase = pronunciationViewModel::saveCurrentPhraseToFlashcards,
+          onDismissFeedback = pronunciationViewModel::clearSaveFeedback,
+        )
+      },
+      emptyStateComposable = {
+        SpanishPronunciationEmptyState(
+          settings = spanishSettings,
+          mode = practiceMode,
         )
       },
     )

@@ -445,7 +445,7 @@ constructor(
     source: ContextCompactionSource,
   ): InternalCompactionResult =
     withContext(ioDispatcher) {
-      if (!Config.isContextCompactEnabled() || model.isAiCore) {
+      if (!Config.isContextCompactEnabled() || model.isAiCore || model.isGeminiCloud) {
         return@withContext InternalCompactionResult(CompactionResult.NOT_NEEDED)
       }
       if (contextCompactor == null && fallbackContextCompactor == null) {
@@ -543,7 +543,7 @@ constructor(
     }
 
   override fun isTokenLimitReached(sessionId: String, model: Model): Boolean {
-    if (!Config.isContextCompactEnabled() || model.isAiCore) {
+    if (!Config.isContextCompactEnabled() || model.isAiCore || model.isGeminiCloud) {
       return false
     }
     val config = sessionConfigs[sessionId]

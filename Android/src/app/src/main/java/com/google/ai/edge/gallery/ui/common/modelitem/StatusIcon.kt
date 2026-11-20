@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.rounded.CloudQueue
 import androidx.compose.material.icons.rounded.Downloading
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material3.Icon
@@ -62,7 +63,14 @@ fun StatusIcon(
       } else {
         MaterialTheme.colorScheme.primary
       }
-    if (model.downloadInfo.localRelativeDirPathOverride.isNotEmpty()) {
+    if (model.isGeminiCloud) {
+      Icon(
+        Icons.Rounded.CloudQueue,
+        tint = color,
+        contentDescription = stringResource(R.string.cloud_instant_badge),
+        modifier = Modifier.size(MODEL_INFO_ICON_SIZE),
+      )
+    } else if (model.downloadInfo.localRelativeDirPathOverride.isNotEmpty()) {
       Icon(
         Icons.Filled.DownloadForOffline,
         tint = color,

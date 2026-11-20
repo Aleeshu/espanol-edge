@@ -26,6 +26,7 @@ import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.models.Dictionar
 import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.models.XrLanguageTeacherDictionary
 import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.services.MediaPipeXrLanguageTeacherStickerMaker
 import com.google.ai.edge.gallery.customtasks.xrlanguageteacher.services.XrLanguageTeacherStickerMaker
+import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.proto.Dictionary
 import dagger.Module
 import dagger.Provides
@@ -43,8 +44,13 @@ internal object XrLanguageTeacherTaskModule {
   fun provideXrLanguageTeacherTask(
     @ApplicationContext context: Context,
     @XrLanguageTeacherDictionary dictionaryDataStore: DataStore<Dictionary>,
+    dataStoreRepository: DataStoreRepository,
   ): CustomTask {
-    return XrLanguageTeacherTask(context, dictionaryDataStore)
+    return XrLanguageTeacherTask(
+      context = context,
+      dictionaryDataStore = dictionaryDataStore,
+      dataStoreRepository = dataStoreRepository,
+    )
   }
 
   /**

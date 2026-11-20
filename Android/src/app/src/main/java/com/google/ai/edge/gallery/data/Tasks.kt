@@ -154,7 +154,10 @@ data class Task(
    * non-AICore model (`!model.isAiCore`), and the global feature flag.
    */
   fun isContextCompactSupported(model: Model): Boolean =
-    supportContextCompact && !model.isAiCore && Config.isContextCompactEnabled()
+    supportContextCompact &&
+      !model.isAiCore &&
+      !model.isGeminiCloud &&
+      Config.isContextCompactEnabled()
 
   /** Whether this task supports speech input (ASR) in its audio settings. */
   val supportsSpeechInput: Boolean
@@ -212,6 +215,10 @@ object BuiltInTaskId {
   const val SMART_ALBUM = "smart_album"
   const val VIDEO_MOMENT_FINDER = "video_moment_finder"
   const val LLM_XR_LANGUAGE_TEACHER = "llm_xr_language_teacher"
+  const val SPANISH_FLASHCARDS = "spanish_flashcards"
+
+  val ACTIVE_SPANISH_TASK_IDS: Set<String> =
+    setOf(LLM_CHAT, LLM_XR_LANGUAGE_TEACHER, SPANISH_FLASHCARDS, LLM_ASK_AUDIO)
 }
 
 private val allLegacyTaskIds: Set<String> =
